@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FeistOS v0.06 - Alpha</title>
+    <title>FeistOS v0.065 - Alpha</title>
     <style>
         /* ========================================= */
         /* --- СТИЛИ (ГРАФИКА ИЗ ТВОЕГО ФАЙЛА) --- */
@@ -202,6 +202,16 @@
 
         /* --- ОКНА (WINDOWS) --- */
         .window {
+/* --- КАСТОМНОЕ РАСТЯГИВАНИЕ ОКОН (RESIZE) --- */
+        .resizer { position: absolute; z-index: 10; }
+        .resizer-r { top: 0; right: 0; width: 6px; height: 100%; cursor: e-resize; }
+        .resizer-b { bottom: 0; left: 0; width: 100%; height: 6px; cursor: s-resize; }
+        .resizer-l { top: 0; left: 0; width: 6px; height: 100%; cursor: w-resize; }
+        .resizer-t { top: 0; left: 0; width: 100%; height: 6px; cursor: n-resize; }
+        .resizer-br { bottom: -3px; right: -3px; width: 12px; height: 12px; cursor: se-resize; }
+        .resizer-bl { bottom: -3px; left: -3px; width: 12px; height: 12px; cursor: sw-resize; }
+        .resizer-tr { top: -3px; right: -3px; width: 12px; height: 12px; cursor: ne-resize; }
+        .resizer-tl { top: -3px; left: -3px; width: 12px; height: 12px; cursor: nw-resize; }
             position: absolute;
             background-color: var(--window-bg);
             border-radius: 6px;
@@ -209,7 +219,6 @@
             display: flex; flex-direction: column;
             border: 1px solid #777;
             /* ИЗМЕНЕНИЯ ДЛЯ РАСТЯГИВАНИЯ: */
-            resize: both;       /* Разрешаем менять размер */
             overflow: hidden;   /* Скрываем лишнее */
             min-width: 300px; min-height: 200px;
             animation: popIn 0.2s cubic-bezier(0.1, 0.9, 0.2, 1);
@@ -653,6 +662,7 @@
     </style>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 </head>
 <body>
 <canvas id="graffiti-layer" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2000000; pointer-events: none;"></canvas>
@@ -660,6 +670,20 @@
         <div class="ctx-item" id="ctx-open">Открыть</div>
         <div class="ctx-separator"></div>
         <div class="ctx-item" id="ctx-delete" style="color:#ff5555;">Удалить</div>
+    </div>
+<div id="desktop-context-menu" style="display:none; position:absolute; background:#222; border:1px solid #555; box-shadow:2px 2px 10px rgba(0,0,0,0.5); z-index:99999; width:180px; font-family:'Segoe UI', sans-serif;">
+        <div class="ctx-item" id="d-ctx-open">Открыть</div>
+        <div class="ctx-separator"></div>
+        <div class="ctx-item" id="d-ctx-rename">Переименовать...</div>
+        <div class="ctx-item" id="d-ctx-props">Свойства</div>
+        <div class="ctx-separator"></div>
+        <div class="ctx-item" id="d-ctx-delete" style="color:#ff5555;">Удалить ярлык</div>
+    </div>
+
+<div id="trash-context-menu" style="display:none; position:absolute; background:#222; border:1px solid #555; box-shadow:2px 2px 10px rgba(0,0,0,0.5); z-index:99999; width:180px; font-family:'Segoe UI', sans-serif;">
+        <div class="ctx-item" id="t-ctx-restore" style="color:#33ff33; font-weight:bold;">Восстановить</div>
+        <div class="ctx-separator"></div>
+        <div class="ctx-item" id="t-ctx-delete-perm" style="color:#ff5555;">Удалить навсегда</div>
     </div>
 
 <div class="crt-overlay"></div>
@@ -700,7 +724,7 @@
     </div>
 
     <div id="boot-screen">
-        <div class="os-logo">Feist OS <span style="font-size: 1rem; opacity: 0.7;">v0.06</span></div>
+        <div class="os-logo">Feist OS <span style="font-size: 1rem; opacity: 0.7;">v0.065</span></div>
         <div class="boot-log" id="boot-log"></div>
         <div class="progress-container">
             <div class="progress-bar" id="progress-bar"></div>
@@ -853,6 +877,7 @@ if (e.shiftKey && (e.key === '1' || e.code === 'Digit1')) {
             { id: 'notes', label: 'Важные заметки.txt', type: 'doc', visualText: 'TXT', app: 'notepad' },
             { id: 'browser', label: 'Quantum Browser', type: 'app', visualText: 'WEB', app: 'browser' },
 { id: 'chat', label: 'ZET CHAT', type: 'app', visualText: 'ZET', app: 'zet_chat' },
+{ id: 'reset', label: 'Factory Reset', type: 'sys', visualText: 'RST', app: 'reset' },
             { id: 'settings', label: 'Панель управления', type: 'set', visualText: 'CFG', app: 'settings' },
             { id: 'trash', label: 'Корзина', type: 'bin', visualText: 'BIN', app: 'trash' },
 { id: 'race', label: 'Cyber Bet', type: 'app', visualText: 'RACE', app: 'cyber_bet' },
@@ -877,9 +902,9 @@ if (e.shiftKey && (e.key === '1' || e.code === 'Digit1')) {
         // Инициализация
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-        const selectionBox = document.getElementById('selection-box');
-        const startMenu = document.getElementById('start-menu');
-        const startBtn = document.getElementById('start-btn');
+        let selectionBox = document.getElementById('selection-box');
+        let startMenu = document.getElementById('start-menu');
+        let startBtn = document.getElementById('start-btn');
         let zIndexCounter = 100; 
 let isSpacePressed = false;
         window.addEventListener('keydown', (e) => { if(e.code === 'Space') isSpacePressed = true; });
@@ -942,7 +967,7 @@ let isSpacePressed = false;
         const progressBar = document.getElementById('progress-bar');
         const bootLog = document.getElementById('boot-log');
         const logMessages = [
-            "Initializing FeistOS Kernel v0.06...",
+            "Initializing FeistOS Kernel v0.065...",
             "Loading drivers [VESA, AUDIO, NET]...",
             "Mounting file system...",
             "Reading LocalStorage data...",
@@ -1109,35 +1134,74 @@ document.addEventListener('keydown', function(e) {
         }
 
         // ==========================================
-        // 3. ИНИЦИАЛИЗАЦИЯ ИКОНОК
+        // 3. ИНИЦИАЛИЗАЦИЯ ИКОНОК (С ПАМЯТЬЮ)
         // ==========================================
         function initDesktop() {
+            desktop.innerHTML = '<div id="selection-box"></div>' + document.getElementById('start-menu').outerHTML + document.querySelector('.taskbar').outerHTML;
+            // Перепривязываем переменные после перезаписи HTML
+            selectionBox = document.getElementById('selection-box');
+            startMenu = document.getElementById('start-menu');
+            startBtn = document.getElementById('start-btn');
+
             let col = 0, row = 0;
             const startX = 20, startY = 20;
             const gridX = 100, gridY = 110;
             const maxRows = Math.floor((window.innerHeight - 60) / gridY);
 
+            // Загружаем сохраненное состояние рабочего стола
+            const desktopState = JSON.parse(localStorage.getItem('feistos_desktop') || '{}');
+
             defaultIcons.forEach(data => {
+                const state = desktopState[data.id] || {};
+                if (state.deleted) return; // Если ярлык удален - не рисуем его
+
+                const iconName = state.name || data.label; // Берем сохраненное имя или дефолтное
+
                 const icon = document.createElement('div');
                 icon.className = 'icon';
+                icon.dataset.id = data.id; // Запоминаем ID
                 icon.innerHTML = `
                     <div class="icon-visual ${data.type}">${data.visualText}</div>
-                    <span>${data.label}</span>
+                    <span class="icon-text">${iconName}</span>
                 `;
                 
-                icon.style.left = (startX + col * gridX) + 'px';
-                icon.style.top = (startY + row * gridY) + 'px';
+                // Восстанавливаем позицию или ставим по сетке
+                if (state.x && state.y) {
+                    icon.style.left = state.x;
+                    icon.style.top = state.y;
+                } else {
+                    icon.style.left = (startX + col * gridX) + 'px';
+                    icon.style.top = (startY + row * gridY) + 'px';
+                    row++; if (row >= maxRows) { row = 0; col++; }
+                }
                 
                 icon.addEventListener('mousedown', (e) => onIconMouseDown(e, icon));
-                icon.addEventListener('dblclick', () => openWindow(data.app, data.label));
+                icon.addEventListener('dblclick', () => openWindow(data.app, iconName));
+                
+                // ПКМ по ярлыку (Новое контекстное меню)
+                icon.addEventListener('contextmenu', (e) => {
+                    e.preventDefault(); e.stopPropagation();
+                    if (!selectedIcons.has(icon)) { clearSelection(); selectIcon(icon); }
+                    showDesktopContextMenu(e.pageX, e.pageY, icon, data);
+                });
 
                 desktop.appendChild(icon);
-
-                row++;
-                if (row >= maxRows) { row = 0; col++; }
             });
 
             desktop.addEventListener('mousedown', onDesktopMouseDown);
+            desktop.addEventListener('contextmenu', (e) => { e.preventDefault(); hideContextMenus(); });
+        }
+
+        // Сохранение состояния всех иконок (позиции)
+        function saveDesktopState() {
+            const state = JSON.parse(localStorage.getItem('feistos_desktop') || '{}');
+            document.querySelectorAll('.icon').forEach(icon => {
+                const id = icon.dataset.id;
+                if (!state[id]) state[id] = {};
+                state[id].x = icon.style.left;
+                state[id].y = icon.style.top;
+            });
+            localStorage.setItem('feistos_desktop', JSON.stringify(state));
         }
 
        // ==========================================
@@ -1345,8 +1409,164 @@ else if (appType === 'zet_chat') {
                     });
                 }, 100);
             }
+
+
+            // ------------------------------------
+            // ПОЛНОЦЕННАЯ КОРЗИНА (С ВОССТАНОВЛЕНИЕМ)
+            // ------------------------------------
             else if (appType === 'trash') {
-                contentHtml = `<div style="padding:20px; text-align:center;">Корзина пуста.</div>`;
+                const desktopState = JSON.parse(localStorage.getItem('feistos_desktop') || '{}');
+                let trashItemsHtml = '';
+
+                // Ищем все удаленные файлы в памяти
+                defaultIcons.forEach(data => {
+                    const state = desktopState[data.id] || {};
+                    // Берем те, которые удалены с рабочего стола, но НЕ удалены навсегда
+                    if (state.deleted && !state.permDeleted) {
+                        const iconName = state.name || data.label;
+                        trashItemsHtml += `
+                            <div class="file-item trash-item" data-id="${data.id}" style="margin:10px; display:inline-block; vertical-align:top; width:75px; cursor:pointer;">
+                                <div class="file-icon" style="background: linear-gradient(135deg, #7f8c8d, #34495e); color: white; margin: 0 auto 5px; width:48px; height:48px; font-size:16px;">${data.visualText}</div>
+                                <div class="file-name" style="word-wrap:break-word; font-size:12px;">${iconName}</div>
+                            </div>
+                        `;
+                    }
+                });
+
+                if (trashItemsHtml === '') {
+                    contentHtml = `<div id="trash-empty-msg" style="padding:40px; text-align:center; color:#777; font-size:16px;">Корзина пуста.</div>`;
+                } else {
+                    contentHtml = `<div id="trash-content-${winId}" style="padding:15px; height:100%; overflow-y:auto; background:#fff; color:#333;">${trashItemsHtml}</div>`;
+                    
+                    // Оживляем иконки в корзине (ПКМ)
+                    setTimeout(() => {
+                        const trashContainer = document.getElementById(`trash-content-${winId}`);
+                        if (!trashContainer) return;
+                        
+                        // Скрываем меню при клике по пустому месту в корзине
+                        trashContainer.addEventListener('mousedown', hideContextMenus);
+
+                        const items = trashContainer.querySelectorAll('.trash-item');
+                        items.forEach(item => {
+                            item.addEventListener('contextmenu', (e) => {
+                                e.preventDefault(); e.stopPropagation();
+                                hideContextMenus();
+                                
+                                const tCtx = document.getElementById('trash-context-menu');
+                                tCtx.style.display = 'block';
+                                tCtx.style.left = e.pageX + 'px';
+                                tCtx.style.top = e.pageY + 'px';
+                                
+                                const id = item.dataset.id;
+                                
+                                // --- ЛОГИКА: ВОССТАНОВИТЬ ---
+                                document.getElementById('t-ctx-restore').onclick = () => {
+                                    const state = JSON.parse(localStorage.getItem('feistos_desktop') || '{}');
+                                    if (state[id]) {
+                                        state[id].deleted = false; // Снимаем метку удаления
+                                        localStorage.setItem('feistos_desktop', JSON.stringify(state));
+                                        
+                                        // Рисуем иконку обратно на рабочем столе без перезагрузки всей ОС
+                                        const dataToRestore = defaultIcons.find(d => d.id === id);
+                                        if (dataToRestore) {
+                                            const iconName = state[id].name || dataToRestore.label;
+                                            const icon = document.createElement('div');
+                                            icon.className = 'icon';
+                                            icon.dataset.id = dataToRestore.id;
+                                            icon.innerHTML = `<div class="icon-visual ${dataToRestore.type}">${dataToRestore.visualText}</div><span class="icon-text">${iconName}</span>`;
+                                            
+                                            // Возвращаем на старое место (или в центр)
+                                            if (state[id].x && state[id].y) {
+                                                icon.style.left = state[id].x;
+                                                icon.style.top = state[id].y;
+                                            } else {
+                                                icon.style.left = (window.innerWidth / 2 - 40) + 'px';
+                                                icon.style.top = (window.innerHeight / 2 - 40) + 'px';
+                                            }
+                                            
+                                            // Вешаем стандартные слушатели стола
+                                            icon.addEventListener('mousedown', (e) => onIconMouseDown(e, icon));
+                                            icon.addEventListener('dblclick', () => openWindow(dataToRestore.app, iconName));
+                                            icon.addEventListener('contextmenu', (ev) => {
+                                                ev.preventDefault(); ev.stopPropagation();
+                                                if (!selectedIcons.has(icon)) { clearSelection(); selectIcon(icon); }
+                                                showDesktopContextMenu(ev.pageX, ev.pageY, icon, dataToRestore);
+                                            });
+                                            document.getElementById('desktop').appendChild(icon);
+                                        }
+                                    }
+                                    
+                                    // Убираем из окна корзины визуально
+                                    item.remove();
+                                    if (trashContainer.children.length === 0) {
+                                        trashContainer.innerHTML = `<div id="trash-empty-msg" style="padding:40px; text-align:center; color:#777; font-size:16px;">Корзина пуста.</div>`;
+                                    }
+                                    hideContextMenus();
+                                };
+                                
+                                // --- ЛОГИКА: УДАЛИТЬ НАВСЕГДА ---
+                                document.getElementById('t-ctx-delete-perm').onclick = () => {
+                                    if(confirm("Удалить этот файл навсегда? Это действие необратимо.")) {
+                                        const state = JSON.parse(localStorage.getItem('feistos_desktop') || '{}');
+                                        if (!state[id]) state[id] = {};
+                                        state[id].permDeleted = true; // Метка "стёрто с концами"
+                                        localStorage.setItem('feistos_desktop', JSON.stringify(state));
+                                        
+                                        item.remove();
+                                        if (trashContainer.children.length === 0) {
+                                            trashContainer.innerHTML = `<div id="trash-empty-msg" style="padding:40px; text-align:center; color:#777; font-size:16px;">Корзина пуста.</div>`;
+                                        }
+                                        hideContextMenus();
+                                    }
+                                };
+                            });
+                        });
+                    }, 50);
+                }
+            }
+            // --- НОВАЯ ПРОГРАММА: СБРОС СИСТЕМЫ ---
+            else if (appType === 'reset') {
+win.style.zIndex = 9999999;
+                contentHtml = `
+                    <div style="padding: 20px; background: #1a0000; color: #ff5555; height: 100%; font-family: 'Courier New', monospace; box-sizing: border-box; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                        <h2 style="margin-top: 0; font-size: 24px; text-shadow: 0 0 10px #ff0000;">CRITICAL WARNING</h2>
+                        <p style="color: #ccc; margin-bottom: 20px; line-height: 1.5; max-width: 80%;">
+                            Это действие <b>ПОЛНОСТЬЮ УНИЧТОЖИТ</b> все сохраненные данные:<br>
+                            позиции и размеры окон, новые имена ярлыков, текстовые записи и сессии. Система будет возвращена к заводским настройкам.
+                        </p>
+                        <p style="color: #fff; font-weight: bold; margin-bottom: 30px;">Вы абсолютно уверены?</p>
+                        <div style="display: flex; gap: 20px;">
+                            <button id="btn-reset-confirm-${zIndexCounter}" style="padding: 10px 20px; background: #ff0000; color: white; border: 1px solid #ffaa00; cursor: pointer; font-family: inherit; font-weight: bold; transition: 0.3s;">[ УДАЛИТЬ ВСЁ ]</button>
+                            <button id="btn-reset-cancel-${zIndexCounter}" style="padding: 10px 20px; background: #333; color: white; border: 1px solid #777; cursor: pointer; font-family: inherit;">[ ОТМЕНА ]</button>
+                        </div>
+                    </div>
+                `;
+
+                // Оживляем кнопки после отрисовки окна
+                setTimeout(() => {
+                    const confirmBtn = document.getElementById(`btn-reset-confirm-${zIndexCounter}`);
+                    const cancelBtn = document.getElementById(`btn-reset-cancel-${zIndexCounter}`);
+
+                    if (cancelBtn) {
+                        cancelBtn.onclick = () => win.remove(); // Просто закрываем окно
+                    }
+
+                    if (confirmBtn) {
+                        confirmBtn.onclick = () => {
+                            // Хакерская анимация перед удалением
+                            confirmBtn.textContent = "[ ERASING MEMORY... ]";
+                            confirmBtn.style.backgroundColor = "#550000";
+                            confirmBtn.style.pointerEvents = "none";
+                            
+                            setTimeout(() => {
+                                // Очищаем ВСЮ память браузера (localStorage) для этого сайта
+                                localStorage.clear();
+                                // Жестко перезагружаем страницу
+                                location.reload();
+                            }, 1200); // Ждем 1.2 секунды для красоты
+                        };
+                    }
+                }, 100);
             }
 else if (appType === 'settings') {
                 // Получаем сохраненное имя или ставим стандартное
@@ -1365,7 +1585,7 @@ else if (appType === 'settings') {
                                 <h2>О системе</h2>
                                 <div class="setting-group">
                                     <div class="setting-label">Версия FeistOS</div>
-                                    <div style="font-family:monospace; color:#333;">v0.06 Alpha</div>
+                                    <div style="font-family:monospace; color:#333;">v0.065 Alpha</div>
                                 </div>
                                 <div class="setting-group">
                                     <div class="setting-label">Статус ядра</div>
@@ -1487,6 +1707,11 @@ else if (appType === 'settings') {
             }
 
             win.innerHTML = `
+                <div class="resizer resizer-t"></div><div class="resizer resizer-r"></div>
+                <div class="resizer resizer-b"></div><div class="resizer resizer-l"></div>
+                <div class="resizer resizer-tr"></div><div class="resizer resizer-tl"></div>
+                <div class="resizer resizer-br"></div><div class="resizer resizer-bl"></div>
+
                 <div class="window-header">
                     <div class="window-title">${title}</div>
                     <div class="window-controls">
@@ -1496,6 +1721,21 @@ else if (appType === 'settings') {
                 </div>
                 <div class="window-content" style="display:flex; flex-direction:column;">${contentHtml}</div>
             `;
+
+            // --- СИСТЕМА ПАМЯТИ: Восстанавливаем размер окна (ОДИН РАЗ) ---
+            const savedWinState = JSON.parse(localStorage.getItem('feistos_windows') || '{}');
+            if (savedWinState[appType]) {
+                win.style.width = savedWinState[appType].w;
+                win.style.height = savedWinState[appType].h;
+            }
+
+            // Отслеживаем изменение размера окна пользователем и сохраняем
+            const resizeObserver = new ResizeObserver(() => {
+                const state = JSON.parse(localStorage.getItem('feistos_windows') || '{}');
+                state[appType] = { w: win.style.width, h: win.style.height };
+                localStorage.setItem('feistos_windows', JSON.stringify(state));
+            });
+            resizeObserver.observe(win);
 
             desktop.appendChild(win);
 
@@ -1519,24 +1759,22 @@ else if (appType === 'settings') {
                 win.querySelector('#notepad-area').addEventListener('input', function() { localStorage.setItem('feistos_notepad_data', this.value); });
             }
 
+            // Активируем перетаскивание и растягивание
             makeDraggable(win, win.querySelector('.window-header'));
+            makeResizable(win); // НАША НОВАЯ ФУНКЦИЯ
+            
             win.addEventListener('mousedown', () => { win.style.zIndex = ++zIndexCounter; });
 
-// --- ДОБАВКА ДЛЯ ГРАВИТАЦИИ ---
-            // Если режим включен, новое окно сразу падает
+            // --- ДОБАВКА ДЛЯ ГРАВИТАЦИИ ---
             if (typeof gravityActive !== 'undefined' && gravityActive) {
-                // Даем браузеру мгновение на отрисовку, чтобы получить размеры
                 setTimeout(() => {
                     const rect = win.getBoundingClientRect();
-                    
-                    // Переключаем в режим физики (вырываем из верстки)
                     win.style.position = 'fixed';
                     win.style.left = rect.left + 'px';
                     win.style.top = rect.top + 'px';
                     win.style.margin = '0';
                     win.style.zIndex = '9999';
 
-                    // Добавляем в систему
                     physicsObjects.push({
                         el: win,
                         x: rect.left,
@@ -1544,7 +1782,7 @@ else if (appType === 'settings') {
                         w: rect.width,
                         h: rect.height,
                         vx: 0, 
-                        vy: 5, // Начальная скорость вниз
+                        vy: 5,
                         isDragging: false
                     });
                     
@@ -1552,7 +1790,6 @@ else if (appType === 'settings') {
                 }, 50);
             }
         }
-
         // ==========================================
         // 5. DRAG & DROP И ВЫДЕЛЕНИЕ
         // ==========================================
@@ -1571,6 +1808,50 @@ else if (appType === 'settings') {
                 
                 document.addEventListener('mousemove', onMouseMove);
                 document.addEventListener('mouseup', () => document.removeEventListener('mousemove', onMouseMove), {once:true});
+            });
+        }
+
+// Логика растягивания окон со всех сторон
+        function makeResizable(win) {
+            const resizers = win.querySelectorAll('.resizer');
+            let origW = 0, origH = 0, origX = 0, origY = 0, origMouseX = 0, origMouseY = 0;
+
+            resizers.forEach(resizer => {
+                resizer.addEventListener('mousedown', function(e) {
+                    e.preventDefault(); e.stopPropagation();
+                    origW = parseFloat(getComputedStyle(win, null).getPropertyValue('width'));
+                    origH = parseFloat(getComputedStyle(win, null).getPropertyValue('height'));
+                    origX = win.getBoundingClientRect().left;
+                    origY = win.getBoundingClientRect().top;
+                    origMouseX = e.pageX; origMouseY = e.pageY;
+                    
+                    function resize(ev) {
+                        // Тянем вправо
+                        if (resizer.classList.contains('resizer-r') || resizer.classList.contains('resizer-br') || resizer.classList.contains('resizer-tr')) {
+                            win.style.width = origW + (ev.pageX - origMouseX) + 'px';
+                        }
+                        // Тянем влево
+                        if (resizer.classList.contains('resizer-l') || resizer.classList.contains('resizer-bl') || resizer.classList.contains('resizer-tl')) {
+                            const newW = origW - (ev.pageX - origMouseX);
+                            if (newW > 300) { win.style.width = newW + 'px'; win.style.left = origX + (ev.pageX - origMouseX) + 'px'; }
+                        }
+                        // Тянем вниз
+                        if (resizer.classList.contains('resizer-b') || resizer.classList.contains('resizer-br') || resizer.classList.contains('resizer-bl')) {
+                            win.style.height = origH + (ev.pageY - origMouseY) + 'px';
+                        }
+                        // Тянем вверх
+                        if (resizer.classList.contains('resizer-t') || resizer.classList.contains('resizer-tr') || resizer.classList.contains('resizer-tl')) {
+                            const newH = origH - (ev.pageY - origMouseY);
+                            if (newH > 200) { win.style.height = newH + 'px'; win.style.top = origY + (ev.pageY - origMouseY) + 'px'; }
+                        }
+                    }
+                    function stopResize() {
+                        window.removeEventListener('mousemove', resize);
+                        window.removeEventListener('mouseup', stopResize);
+                    }
+                    window.addEventListener('mousemove', resize);
+                    window.addEventListener('mouseup', stopResize);
+                });
             });
         }
 
@@ -1608,7 +1889,10 @@ e.stopPropagation();
                 });
             }
             document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', () => document.removeEventListener('mousemove', onMouseMove), {once:true});
+            document.addEventListener('mouseup', () => {
+                document.removeEventListener('mousemove', onMouseMove);
+                saveDesktopState(); // СОХРАНЯЕМ ПРИ ОТПУСКАНИИ
+            }, {once:true});
         }
 
         function onDesktopMouseDown(e) {
@@ -1751,16 +2035,23 @@ if (paintActive && !isSpacePressed) return;
                 // Возвращаем все объекты на исходные позиции
                 physicsObjects.forEach(obj => {
                     const el = obj.el;
-                    if(el) {
-                        el.style.position = 'absolute';
-                        el.style.left = el.dataset.origLeft;
-                        el.style.top = el.dataset.origTop;
-                        el.style.margin = '';
-                        el.style.width = '';
+                    
+                    // Возвращаем всё как было (absolute для рабочего стола)
+                    el.style.position = 'absolute'; 
+                    el.style.left = el.dataset.origLeft;
+                    el.style.top = el.dataset.origTop;
+                    el.style.margin = '';
+                    el.style.zIndex = '';
+                    
+                    // ФИКС БАГА С РАЗМЕРАМИ: Сбрасываем жесткие размеры ТОЛЬКО для иконок! 
+                    // Окна сохраняют свой размер, который ты натянул мышкой.
+                    if (el.classList.contains('icon')) {
+                        el.style.width = '';  
                         el.style.height = '';
-                        el.style.zIndex = '';
-                        el.onmousedown = null;
                     }
+                    
+                    // Убираем физический захват
+                    el.onmousedown = null;
                 });
                 physicsObjects = [];
                 
@@ -1779,6 +2070,12 @@ if (paintActive && !isSpacePressed) return;
             const desktop = document.getElementById('desktop');
             desktop.style.display = 'block';
             
+            // --- ФИКС БАГА: ЕСЛИ СТОЛ ПУСТОЙ, РИСУЕМ ЯРЛЫКИ ПЕРЕД БЛОКИРОВКОЙ ---
+            if (document.querySelectorAll('.icon').length === 0) {
+                initDesktop();
+            }
+            // -------------------------------------------------------------------
+            
             document.body.classList.add('infected-mode');
             
             // Меняем аватарку и имя
@@ -1786,11 +2083,23 @@ if (paintActive && !isSpacePressed) return;
             document.querySelector('.user-avatar').textContent = "✖";
             document.querySelector('.user-avatar').style.background = "#500";
             
-            // Блокируем иконки
+            // Блокируем иконки (КРОМЕ АВАРИЙНОГО СБРОСА)
             document.querySelectorAll('.icon').forEach(icon => {
-                icon.querySelector('span').textContent = "ENCRYPTED";
-                icon.style.pointerEvents = "none"; 
-                icon.style.opacity = "0.5";
+                if (icon.dataset.id === 'reset') {
+                    // Делаем кнопку сброса рабочей и агрессивно светящейся
+                    icon.style.pointerEvents = "auto"; 
+                    icon.style.opacity = "1";
+                    icon.style.zIndex = "99999"; // Выводим на передний план
+                    icon.querySelector('span').textContent = "KILL SWITCH";
+                    icon.querySelector('span').style.color = "#ff5555";
+                    icon.querySelector('span').style.fontWeight = "bold";
+                    icon.querySelector('span').style.textShadow = "0 0 10px red";
+                    icon.querySelector('.icon-visual').style.boxShadow = "0 0 30px red";
+                } else {
+                    icon.querySelector('span').textContent = "ENCRYPTED";
+                    icon.style.pointerEvents = "none"; 
+                    icon.style.opacity = "0.5";
+                }
             });
 
 // Скрываем кнопку физики
@@ -2024,10 +2333,194 @@ textArea.style.userSelect = "none"; // Запрет выделения мышк�
         let ctxTargetFolder = null; // В какой папке он лежит
         let ctxRefreshId = null;    // ID окна для обновления
 
-        // Скрытие меню при клике в любом месте
-        document.addEventListener('click', () => {
+        let dCtxMenu = document.getElementById('desktop-context-menu');
+
+        function hideContextMenus() {
             if(ctxMenu) ctxMenu.style.display = 'none';
-        });
+            if(dCtxMenu) dCtxMenu.style.display = 'none';
+            
+            // Скрытие меню корзины
+            const tCtxMenu = document.getElementById('trash-context-menu');
+            if(tCtxMenu) tCtxMenu.style.display = 'none';
+        }
+        document.addEventListener('click', hideContextMenus);
+
+        // Логика нового меню рабочего стола
+        function showDesktopContextMenu(x, y, iconEl, data) {
+            hideContextMenus();
+            dCtxMenu.style.display = 'block';
+            dCtxMenu.style.left = x + 'px';
+            dCtxMenu.style.top = y + 'px';
+
+            // 1. ОТКРЫТЬ
+            document.getElementById('d-ctx-open').onclick = () => { iconEl.dispatchEvent(new Event('dblclick')); };
+            
+            // 2. ПЕРЕИМЕНОВАТЬ (INLINE КАК В WINDOWS)
+            document.getElementById('d-ctx-rename').onclick = () => {
+                const span = iconEl.querySelector('.icon-text');
+                const oldName = span.textContent;
+                
+                // Прячем обычный текст
+                span.style.display = 'none';
+                
+                // Создаем поле ввода
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.value = oldName;
+                input.style.width = '100%';
+                input.style.boxSizing = 'border-box';
+                input.style.textAlign = 'center';
+                input.style.fontSize = '11px';
+                input.style.marginTop = '2px';
+                input.style.color = '#000';
+                input.style.borderRadius = '2px';
+                input.style.border = '1px solid #0088ff';
+                input.style.outline = 'none';
+
+                iconEl.appendChild(input);
+                input.focus();
+                input.select(); // Выделяем текст, чтобы можно было сразу писать новое имя
+
+                let isSaved = false;
+
+                // Функция сохранения
+                const saveRename = () => {
+                    if (isSaved) return;
+                    isSaved = true;
+                    const newName = input.value.trim();
+                    
+                    if (newName && newName !== "") {
+                        span.textContent = newName;
+                        // Сохраняем в память
+                        const state = JSON.parse(localStorage.getItem('feistos_desktop') || '{}');
+                        if (!state[data.id]) state[data.id] = {};
+                        state[data.id].name = newName;
+                        localStorage.setItem('feistos_desktop', JSON.stringify(state));
+                    }
+                    
+                    // Убираем инпут, возвращаем текст
+                    input.remove();
+                    span.style.display = '-webkit-box'; 
+                };
+
+                // Сохраняем при клике в другое место (потеря фокуса) или по Enter
+                input.addEventListener('blur', saveRename);
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); saveRename(); }
+                    if (e.key === 'Escape') { e.preventDefault(); input.value = oldName; saveRename(); }
+                });
+            };
+
+            // 3. УДАЛИТЬ (КАСТОМНОЕ СИСТЕМНОЕ ОКНО)
+            document.getElementById('d-ctx-delete').onclick = () => {
+                const iconName = iconEl.querySelector('.icon-text').textContent;
+                const winId = 'win-' + (++zIndexCounter);
+                const win = document.createElement('div');
+                win.className = 'window';
+                win.id = winId;
+                
+                // Позиционируем по центру экрана
+                win.style.left = (window.innerWidth / 2 - 175) + 'px';
+                win.style.top = (window.innerHeight / 2 - 100) + 'px';
+                win.style.width = '350px';
+                win.style.height = 'auto';
+                win.style.zIndex = zIndexCounter;
+
+                win.innerHTML = `
+                    <div class="window-header" style="background: linear-gradient(to right, #e74c3c, #c0392b); color: white;">
+                        <div class="window-title">Подтверждение удаления</div>
+                        <div class="window-controls"><button class="btn-close" style="background: #900; color: #fff;">×</button></div>
+                    </div>
+                    <div class="window-content" style="padding: 20px; background: #f9f9f9; color: #333; font-family: 'Segoe UI', sans-serif; text-align: center;">
+                        <div style="font-size: 30px; margin-bottom: 15px;">⚠️</div>
+                        <p style="margin-bottom: 25px; font-size: 14px;">Вы действительно хотите удалить ярлык <b>"${iconName}"</b> с рабочего стола?</p>
+                        <div style="display: flex; justify-content: center; gap: 15px;">
+                            <button id="btn-del-yes-${winId}" style="padding: 6px 20px; cursor: pointer; border: none; background: #e74c3c; color: white; border-radius: 4px; font-weight: bold; transition: 0.2s;">Удалить</button>
+                            <button id="btn-del-no-${winId}" style="padding: 6px 20px; cursor: pointer; border: 1px solid #ccc; background: #fff; border-radius: 4px; transition: 0.2s;">Отмена</button>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('desktop').appendChild(win);
+
+                // Оживляем кнопки
+                win.querySelector('.btn-close').onclick = () => win.remove();
+                win.querySelector(`#btn-del-no-${winId}`).onclick = () => win.remove();
+                win.querySelector(`#btn-del-yes-${winId}`).onclick = () => {
+                    iconEl.remove();
+                    // Удаляем из памяти базы данных
+                    const state = JSON.parse(localStorage.getItem('feistos_desktop') || '{}');
+                    if (!state[data.id]) state[data.id] = {};
+                    state[data.id].deleted = true;
+                    localStorage.setItem('feistos_desktop', JSON.stringify(state));
+                    win.remove(); // Закрываем окошко
+                };
+
+                // Делаем окошко перетаскиваемым
+                makeDraggable(win, win.querySelector('.window-header'));
+                win.addEventListener('mousedown', () => { win.style.zIndex = ++zIndexCounter; });
+            };
+
+            // 4. СВОЙСТВА (ОТДЕЛЬНОЕ СИСТЕМНОЕ ОКНО)
+            document.getElementById('d-ctx-props').onclick = () => {
+                const iconName = iconEl.querySelector('.icon-text').textContent;
+                const winId = 'win-' + (++zIndexCounter);
+                const win = document.createElement('div');
+                win.className = 'window';
+                win.id = winId;
+                
+                // Позиционируем окно рядом с курсором
+                win.style.left = (x + 20) + 'px';
+                win.style.top = (y + 20) + 'px';
+                win.style.width = '320px';
+                win.style.height = 'auto'; // Высота подстроится сама
+                win.style.zIndex = zIndexCounter;
+
+                // Рисуем интерфейс в стиле Windows
+                win.innerHTML = `
+                    <div class="window-header">
+                        <div class="window-title">Свойства: ${iconName}</div>
+                        <div class="window-controls">
+                            <button class="btn-close">×</button>
+                        </div>
+                    </div>
+                    <div class="window-content" style="padding: 15px; background: #f0f0f0; color: #333; font-family: 'Segoe UI', sans-serif; font-size: 13px; overflow: hidden;">
+                        <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                            <div class="icon-visual ${data.type}" style="width: 48px; height: 48px; position: static; margin-right: 15px;">${data.visualText}</div>
+                            <input type="text" value="${iconName}" readonly style="flex: 1; padding: 6px; border: 1px solid #ccc; background: #fff; color: #333;">
+                        </div>
+                        <hr style="border: none; border-top: 1px solid #ccc; margin: 10px 0;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <tr><td style="padding: 3px 0; color: #666; width: 35%;">Тип файла:</td><td style="padding: 3px 0;">Ярлык приложения (.lnk)</td></tr>
+                            <tr><td style="padding: 3px 0; color: #666;">Приложение:</td><td style="padding: 3px 0;"><b>${data.app}</b></td></tr>
+                            <tr><td style="padding: 3px 0; color: #666;">Системный ID:</td><td style="padding: 3px 0; font-family: monospace;">${data.id}</td></tr>
+                            <tr><td style="padding: 3px 0; color: #666;">Размещение:</td><td style="padding: 3px 0;">C:\\Users\\Desktop</td></tr>
+                        </table>
+                        <hr style="border: none; border-top: 1px solid #ccc; margin: 10px 0;">
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: flex; align-items: center; gap: 5px;">
+                                <input type="checkbox" checked disabled> Только чтение (Read-only)
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 5px; margin-top: 5px;">
+                                <input type="checkbox" disabled> Скрытый (Hidden)
+                            </label>
+                        </div>
+                        <div style="text-align: right;">
+                            <button class="props-ok-btn" style="padding: 5px 20px; cursor: pointer; border: 1px solid #999; background: #e1e1e1; border-radius: 3px;">ОК</button>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('desktop').appendChild(win);
+                
+                // Оживляем кнопки окна свойств
+                win.querySelector('.btn-close').onclick = () => win.remove();
+                win.querySelector('.props-ok-btn').onclick = () => win.remove();
+                
+                // Делаем окно перетаскиваемым и кликабельным
+                makeDraggable(win, win.querySelector('.window-header'));
+                win.addEventListener('mousedown', () => { win.style.zIndex = ++zIndexCounter; });
+            };
+        }
 
         function getCurrentFolderObj() {
             let folder = sysFiles["root"];
@@ -4265,7 +4758,6 @@ window.sendZetMessage = function(winId) {
 </script>
 </body>
 </html>
-
 
 
 
