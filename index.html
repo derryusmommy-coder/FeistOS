@@ -1294,39 +1294,40 @@ else if (appType === 'wave_game') {
                 `;
             }
 else if (appType === 'zet_chat') {
-                // Получаем имя пользователя из настроек
+                // Получаем имя пользователя
                 const savedName = localStorage.getItem('feistos_username') || "Anonymous";
+                
+                // ФИКС: Запоминаем текущий ID окна намертво, чтобы он не менялся при кликах
+                const myZ = zIndexCounter; 
 
                 contentHtml = `
                     <div style="display:flex; flex-direction:column; height:100%; background:#050505; color:#33ff33; font-family:'Courier New', monospace;">
-                        <div id="chat-messages-${zIndexCounter}" style="flex:1; overflow-y:auto; padding:15px; border-bottom:1px solid #33ff33; font-size: 14px;">
+                        <div id="chat-messages-${myZ}" style="flex:1; overflow-y:auto; padding:15px; border-bottom:1px solid #33ff33; font-size: 14px;">
                             <div style="color:#555;">> ZET_CHAT v1.0 ONLINE...</div>
                             <div style="color:#555; margin-bottom: 10px;">> SECURE CONNECTION ESTABLISHED.</div>
                         </div>
                         <div style="display:flex; padding:10px; background:#111; border-top: 2px solid #222;">
-                            <input type="text" id="chat-input-${zIndexCounter}" placeholder="Enter message..." autocomplete="off"
+                            <input type="text" id="chat-input-${myZ}" placeholder="Enter message..." autocomplete="off"
                                 style="flex:1; background:#000; color:#33ff33; border:1px solid #33ff33; padding:10px; font-family:inherit; outline:none;"
-                                onkeydown="if(event.key === 'Enter') window.sendZetMessage(${zIndexCounter})">
-                            <button onclick="window.sendZetMessage(${zIndexCounter})"
+                                onkeydown="if(event.key === 'Enter') window.sendZetMessage(${myZ})">
+                            <button onclick="window.sendZetMessage(${myZ})"
                                 style="background:#33ff33; color:#000; border:none; padding:0 20px; margin-left:10px; font-weight:bold; cursor:pointer; font-family:inherit;">SEND</button>
                         </div>
                     </div>
                 `;
 
-                // Подключаемся к базе данных для этого окна
+                // Подключаемся к базе данных
                 setTimeout(() => {
-                    const msgBox = document.getElementById(`chat-messages-${zIndexCounter}`);
-                    // Слушаем поступление новых сообщений (последние 50 штук)
+                    const msgBox = document.getElementById(`chat-messages-${myZ}`);
                     db.ref('zet_messages').limitToLast(50).on('child_added', (snapshot) => {
-                        // Если окно уже закрыто, ничего не делаем
-                        if (!document.getElementById(`chat-messages-${zIndexCounter}`)) return; 
+                        // Если окно закрыто, игнорируем
+                        if (!document.getElementById(`chat-messages-${myZ}`)) return; 
                         
                         const data = snapshot.val();
                         const msgEl = document.createElement('div');
                         msgEl.style.marginBottom = "8px";
                         msgEl.style.lineHeight = "1.4";
 
-                        // Цвета: твои сообщения белые, чужие — неоново-зеленые
                         const isMe = data.name === (localStorage.getItem('feistos_username') || "Anonymous");
                         const nameColor = isMe ? "#fff" : "#33ff33";
                         const textColor = isMe ? "#ccc" : "#00ff00";
@@ -1334,8 +1335,13 @@ else if (appType === 'zet_chat') {
                         msgEl.innerHTML = `<span style="color:${nameColor}; font-weight:bold;">[${data.name}]</span> <span style="color:${textColor}; word-break:break-all;">${data.text}</span>`;
                         msgBox.appendChild(msgEl);
                         
-                        // Автопрокрутка вниз при новом сообщении
+                        // Автопрокрутка вниз
                         msgBox.scrollTop = msgBox.scrollHeight;
+
+                        // Если есть SoundEngine, воспроизводим звук при новом сообщении (не от нас)
+                        if (!isMe && typeof SoundEngine !== 'undefined') {
+                            SoundEngine.sfx.click();
+                        }
                     });
                 }, 100);
             }
@@ -4228,4 +4234,5 @@ window.sendZetMessage = function(winId) {
 </script>
 </body>
 </html>
+
 
