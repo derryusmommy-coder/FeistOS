@@ -651,6 +651,8 @@
         @keyframes blinkRed { 50% { opacity: 0.5; } }
 
     </style>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body>
 <canvas id="graffiti-layer" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2000000; pointer-events: none;"></canvas>
@@ -850,6 +852,7 @@ if (e.shiftKey && (e.key === '1' || e.code === 'Digit1')) {
 { id: 'virus', label: 'LOLOG Files', type: 'bin', visualText: 'RUN', app: 'virus_trap' },
             { id: 'notes', label: 'Важные заметки.txt', type: 'doc', visualText: 'TXT', app: 'notepad' },
             { id: 'browser', label: 'Quantum Browser', type: 'app', visualText: 'WEB', app: 'browser' },
+{ id: 'chat', label: 'ZET CHAT', type: 'app', visualText: 'ZET', app: 'zet_chat' },
             { id: 'settings', label: 'Панель управления', type: 'set', visualText: 'CFG', app: 'settings' },
             { id: 'trash', label: 'Корзина', type: 'bin', visualText: 'BIN', app: 'trash' },
 { id: 'race', label: 'Cyber Bet', type: 'app', visualText: 'RACE', app: 'cyber_bet' },
@@ -859,6 +862,21 @@ if (e.shiftKey && (e.key === '1' || e.code === 'Digit1')) {
 
         // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
         const desktop = document.getElementById('desktop');
+// ==========================================
+        // НАСТРОЙКА FIREBASE (ZET CHAT)
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyChq9Gx5xboSuIV5aScd-k78uanzltXCJM",
+            authDomain: "feistos-chat.firebaseapp.com",
+            databaseURL: "https://feistos-chat-default-rtdb.firebaseio.com",
+            projectId: "feistos-chat",
+            storageBucket: "feistos-chat.firebasestorage.app",
+            messagingSenderId: "1026665985663",
+            appId: "1:1026665985663:web:2b5024f6daa332fffc714a"
+        };
+        // Инициализация
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
         const selectionBox = document.getElementById('selection-box');
         const startMenu = document.getElementById('start-menu');
         const startBtn = document.getElementById('start-btn');
@@ -1274,6 +1292,52 @@ else if (appType === 'wave_game') {
                         </div>
                     </div>
                 `;
+            }
+else if (appType === 'zet_chat') {
+                // Получаем имя пользователя из настроек
+                const savedName = localStorage.getItem('feistos_username') || "Anonymous";
+
+                contentHtml = `
+                    <div style="display:flex; flex-direction:column; height:100%; background:#050505; color:#33ff33; font-family:'Courier New', monospace;">
+                        <div id="chat-messages-${zIndexCounter}" style="flex:1; overflow-y:auto; padding:15px; border-bottom:1px solid #33ff33; font-size: 14px;">
+                            <div style="color:#555;">> ZET_CHAT v1.0 ONLINE...</div>
+                            <div style="color:#555; margin-bottom: 10px;">> SECURE CONNECTION ESTABLISHED.</div>
+                        </div>
+                        <div style="display:flex; padding:10px; background:#111; border-top: 2px solid #222;">
+                            <input type="text" id="chat-input-${zIndexCounter}" placeholder="Enter message..." autocomplete="off"
+                                style="flex:1; background:#000; color:#33ff33; border:1px solid #33ff33; padding:10px; font-family:inherit; outline:none;"
+                                onkeydown="if(event.key === 'Enter') window.sendZetMessage(${zIndexCounter})">
+                            <button onclick="window.sendZetMessage(${zIndexCounter})"
+                                style="background:#33ff33; color:#000; border:none; padding:0 20px; margin-left:10px; font-weight:bold; cursor:pointer; font-family:inherit;">SEND</button>
+                        </div>
+                    </div>
+                `;
+
+                // Подключаемся к базе данных для этого окна
+                setTimeout(() => {
+                    const msgBox = document.getElementById(`chat-messages-${zIndexCounter}`);
+                    // Слушаем поступление новых сообщений (последние 50 штук)
+                    db.ref('zet_messages').limitToLast(50).on('child_added', (snapshot) => {
+                        // Если окно уже закрыто, ничего не делаем
+                        if (!document.getElementById(`chat-messages-${zIndexCounter}`)) return; 
+                        
+                        const data = snapshot.val();
+                        const msgEl = document.createElement('div');
+                        msgEl.style.marginBottom = "8px";
+                        msgEl.style.lineHeight = "1.4";
+
+                        // Цвета: твои сообщения белые, чужие — неоново-зеленые
+                        const isMe = data.name === (localStorage.getItem('feistos_username') || "Anonymous");
+                        const nameColor = isMe ? "#fff" : "#33ff33";
+                        const textColor = isMe ? "#ccc" : "#00ff00";
+
+                        msgEl.innerHTML = `<span style="color:${nameColor}; font-weight:bold;">[${data.name}]</span> <span style="color:${textColor}; word-break:break-all;">${data.text}</span>`;
+                        msgBox.appendChild(msgEl);
+                        
+                        // Автопрокрутка вниз при новом сообщении
+                        msgBox.scrollTop = msgBox.scrollHeight;
+                    });
+                }, 100);
             }
             else if (appType === 'trash') {
                 contentHtml = `<div style="padding:20px; text-align:center;">Корзина пуста.</div>`;
@@ -4141,6 +4205,27 @@ function initSpikeGameLogic(id, mode, playerColor, spikeColor) {
     requestAnimationFrame(loop);
 }
 
+// ==========================================
+// ФУНКЦИЯ ОТПРАВКИ СООБЩЕНИЙ В ZET CHAT
+// ==========================================
+window.sendZetMessage = function(winId) {
+    const input = document.getElementById(`chat-input-${winId}`);
+    const text = input.value.trim();
+    if (!text) return;
+
+    const name = localStorage.getItem('feistos_username') || "Anonymous";
+
+    // Отправляем объект в базу данных Firebase
+    db.ref('zet_messages').push({
+        name: name,
+        text: text,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+    });
+
+    input.value = ''; // Очищаем поле ввода
+};
+
 </script>
 </body>
 </html>
+
