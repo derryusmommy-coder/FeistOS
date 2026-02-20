@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FeistOS v0.053 - Alpha</title>
+    <title>FeistOS v0.06 - Alpha</title>
     <style>
         /* ========================================= */
         /* --- СТИЛИ (ГРАФИКА ИЗ ТВОЕГО ФАЙЛА) --- */
@@ -700,7 +700,7 @@
     </div>
 
     <div id="boot-screen">
-        <div class="os-logo">Feist OS <span style="font-size: 1rem; opacity: 0.7;">v0.053</span></div>
+        <div class="os-logo">Feist OS <span style="font-size: 1rem; opacity: 0.7;">v0.06</span></div>
         <div class="boot-log" id="boot-log"></div>
         <div class="progress-container">
             <div class="progress-bar" id="progress-bar"></div>
@@ -942,7 +942,7 @@ let isSpacePressed = false;
         const progressBar = document.getElementById('progress-bar');
         const bootLog = document.getElementById('boot-log');
         const logMessages = [
-            "Initializing FeistOS Kernel v0.053...",
+            "Initializing FeistOS Kernel v0.06...",
             "Loading drivers [VESA, AUDIO, NET]...",
             "Mounting file system...",
             "Reading LocalStorage data...",
@@ -1365,7 +1365,7 @@ else if (appType === 'settings') {
                                 <h2>О системе</h2>
                                 <div class="setting-group">
                                     <div class="setting-label">Версия FeistOS</div>
-                                    <div style="font-family:monospace; color:#333;">v0.053 Alpha</div>
+                                    <div style="font-family:monospace; color:#333;">v0.06 Alpha</div>
                                 </div>
                                 <div class="setting-group">
                                     <div class="setting-label">Статус ядра</div>
@@ -4265,6 +4265,7 @@ window.sendZetMessage = function(winId) {
 </script>
 </body>
 </html>
+
 
 
 
