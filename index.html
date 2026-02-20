@@ -4219,6 +4219,37 @@ window.sendZetMessage = function(winId) {
     const text = input.value.trim();
     if (!text) return;
 
+    // --- ЛОВИМ КОМАНДУ /name ---
+    if (text.startsWith('/name ')) {
+        const newName = text.replace('/name ', '').trim();
+        
+        if (newName) {
+            // 1. Сохраняем новое имя в базу браузера
+            localStorage.setItem('feistos_username', newName);
+            
+            // 2. Обновляем имя в ПУСКЕ и Настройках (твоя встроенная функция)
+            if (typeof changeUsername === 'function') {
+                changeUsername(newName);
+            }
+
+            // 3. Выводим системное уведомление в чат (видим только мы)
+            const msgBox = document.getElementById(`chat-messages-${winId}`);
+            if (msgBox) {
+                const sysMsg = document.createElement('div');
+                sysMsg.style.marginBottom = "8px";
+                sysMsg.style.color = "#ffff00"; // Желтый цвет для системных сообщений
+                sysMsg.innerHTML = `> SYSTEM: Nickname successfully changed to [${newName}]`;
+                msgBox.appendChild(sysMsg);
+                msgBox.scrollTop = msgBox.scrollHeight;
+            }
+        }
+        
+        input.value = ''; // Очищаем поле ввода
+        return; // ПРЕРЫВАЕМ ФУНКЦИЮ, чтобы команда не улетела другим в чат!
+    }
+    // ----------------------------
+
+    // Если это обычное сообщение, берем текущее имя и отправляем
     const name = localStorage.getItem('feistos_username') || "Anonymous";
 
     // Отправляем объект в базу данных Firebase
@@ -4234,5 +4265,6 @@ window.sendZetMessage = function(winId) {
 </script>
 </body>
 </html>
+
 
 
