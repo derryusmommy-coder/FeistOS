@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FeistOS v0.065 - Alpha</title>
+    <title>FeistOS v0.07 - Alpha</title>
     <style>
         /* ========================================= */
         /* --- СТИЛИ (ГРАФИКА ИЗ ТВОЕГО ФАЙЛА) --- */
@@ -202,16 +202,16 @@
 
         /* --- ОКНА (WINDOWS) --- */
         .window {
-/* --- КАСТОМНОЕ РАСТЯГИВАНИЕ ОКОН (RESIZE) --- */
-        .resizer { position: absolute; z-index: 10; }
+/* Увеличен z-index и ползунки сдвинуты внутрь окна (bottom: 0), чтобы их не срезало */
+        .resizer { position: absolute; z-index: 10000; }
         .resizer-r { top: 0; right: 0; width: 6px; height: 100%; cursor: e-resize; }
         .resizer-b { bottom: 0; left: 0; width: 100%; height: 6px; cursor: s-resize; }
         .resizer-l { top: 0; left: 0; width: 6px; height: 100%; cursor: w-resize; }
         .resizer-t { top: 0; left: 0; width: 100%; height: 6px; cursor: n-resize; }
-        .resizer-br { bottom: -3px; right: -3px; width: 12px; height: 12px; cursor: se-resize; }
-        .resizer-bl { bottom: -3px; left: -3px; width: 12px; height: 12px; cursor: sw-resize; }
-        .resizer-tr { top: -3px; right: -3px; width: 12px; height: 12px; cursor: ne-resize; }
-        .resizer-tl { top: -3px; left: -3px; width: 12px; height: 12px; cursor: nw-resize; }
+        .resizer-br { bottom: 0; right: 0; width: 16px; height: 16px; cursor: se-resize; }
+        .resizer-bl { bottom: 0; left: 0; width: 16px; height: 16px; cursor: sw-resize; }
+        .resizer-tr { top: 0; right: 0; width: 16px; height: 16px; cursor: ne-resize; }
+        .resizer-tl { top: 0; left: 0; width: 16px; height: 16px; cursor: nw-resize; }
             position: absolute;
             background-color: var(--window-bg);
             border-radius: 6px;
@@ -433,6 +433,20 @@
             position: absolute; background-color: var(--selection-color); border: 1px solid var(--selection-border);
             display: none; pointer-events: none; z-index: 8000;
         }
+
+/* --- BLACK HOLE MOD --- */
+        .bh-visual {
+            position: absolute;
+            width: 120px; height: 120px;
+            margin-left: -60px; margin-top: -60px;
+            background: radial-gradient(circle, #000 10%, #4a00e0 40%, transparent 70%);
+            border-radius: 50%;
+            box-shadow: 0 0 50px #8e2de2, inset 0 0 20px #000;
+            pointer-events: none;
+            z-index: 100000;
+            animation: spinBH 0.5s linear infinite;
+        }
+        @keyframes spinBH { 100% { transform: rotate(360deg) scale(1.1); } }
 
 /* --- CRT REALITY ENGINE (WOW EFFECT) --- */
         .crt-overlay {
@@ -686,6 +700,13 @@
         <div class="ctx-item" id="t-ctx-delete-perm" style="color:#ff5555;">Удалить навсегда</div>
     </div>
 
+<div id="taskbar-context-menu" style="display:none; position:absolute; background:#222; border:1px solid #555; box-shadow:2px -2px 10px rgba(0,0,0,0.5); z-index:99999; width:180px; font-family:'Segoe UI', sans-serif;">
+        <div class="ctx-item" id="tb-ctx-close" style="color:#ff5555; font-weight:bold;">Закрыть окно</div>
+        <div class="ctx-item" id="tb-ctx-restart">Перезапустить</div>
+        <div class="ctx-separator"></div>
+        <div class="ctx-item" id="tb-ctx-pin">📌 Закрепить</div>
+    </div>
+
 <div class="crt-overlay"></div>
 
 <div id="bios-password-screen">
@@ -724,7 +745,7 @@
     </div>
 
     <div id="boot-screen">
-        <div class="os-logo">Feist OS <span style="font-size: 1rem; opacity: 0.7;">v0.065</span></div>
+        <div class="os-logo">Feist OS <span style="font-size: 1rem; opacity: 0.7;">v0.07</span></div>
         <div class="boot-log" id="boot-log"></div>
         <div class="progress-container">
             <div class="progress-bar" id="progress-bar"></div>
@@ -826,6 +847,7 @@
             <div id="taskbar-apps"></div>
             <button id="paint-btn" onclick="togglePaint()" style="margin-right: 10px; padding: 5px 10px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; border-radius: 4px; cursor: pointer; font-size: 1.2rem;" title="Graffiti">🎨</button>
             <button id="gravity-btn" onclick="toggleGravity()" style="margin-right: 10px; padding: 5px 10px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; border-radius: 4px; cursor: pointer; font-size: 1.2rem;" title="Physics">🧊</button>
+<button id="blackhole-btn" onclick="toggleBlackHole()" style="margin-right: 10px; padding: 5px 10px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; border-radius: 4px; cursor: pointer; font-size: 1.2rem;" title="Black Hole">🌌</button>
             <div class="clock-container"><span id="clock">00:00</span></div>
         </div>
     </div> ```
@@ -883,6 +905,8 @@ if (e.shiftKey && (e.key === '1' || e.code === 'Digit1')) {
 { id: 'race', label: 'Cyber Bet', type: 'app', visualText: 'RACE', app: 'cyber_bet' },
 { id: 'wave', label: 'Neon Wave', type: 'app', visualText: 'WAVE', app: 'wave_game' },
 { id: 'spike', label: 'Spike Hell', type: 'app', visualText: 'DIE', app: 'spike_dodge' },
+{ id: 'papetah', label: 'Papetah Jump', type: 'app', visualText: 'JUMP', app: 'papetah_jump' },
+{ id: 'zet_fight', label: 'Zet Fight', type: 'app', visualText: 'BOSS', app: 'zet_fight' }
         ];
 
         // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
@@ -967,7 +991,7 @@ let isSpacePressed = false;
         const progressBar = document.getElementById('progress-bar');
         const bootLog = document.getElementById('boot-log');
         const logMessages = [
-            "Initializing FeistOS Kernel v0.065...",
+            "Initializing FeistOS Kernel v0.07...",
             "Loading drivers [VESA, AUDIO, NET]...",
             "Mounting file system...",
             "Reading LocalStorage data...",
@@ -1138,6 +1162,7 @@ document.addEventListener('keydown', function(e) {
         // ==========================================
         function initDesktop() {
             desktop.innerHTML = '<div id="selection-box"></div>' + document.getElementById('start-menu').outerHTML + document.querySelector('.taskbar').outerHTML;
+desktop.innerHTML = '<div id="selection-box"></div><div id="black-hole-visual"></div>' + document.getElementById('start-menu').outerHTML + document.querySelector('.taskbar').outerHTML;
             // Перепривязываем переменные после перезаписи HTML
             selectionBox = document.getElementById('selection-box');
             startMenu = document.getElementById('start-menu');
@@ -1184,6 +1209,19 @@ document.addEventListener('keydown', function(e) {
                     if (!selectedIcons.has(icon)) { clearSelection(); selectIcon(icon); }
                     showDesktopContextMenu(e.pageX, e.pageY, icon, data);
                 });
+
+// --- ВОССТАНОВЛЕНИЕ ЗАКРЕПЛЕННЫХ ПРИЛОЖЕНИЙ В ПАНЕЛИ ЗАДАЧ ---
+            const taskbarContainer = document.getElementById('taskbar-apps');
+            taskbarContainer.innerHTML = ''; // Очищаем дефолтные
+            const pinnedApps = JSON.parse(localStorage.getItem('feistos_pinned') || '[]');
+            pinnedApps.forEach(p => {
+                const btn = document.createElement('div');
+                btn.className = 'taskbar-app'; // Без 'active', т.к. они закрыты
+                btn.textContent = p.title;
+                btn.dataset.app = p.app;
+                btn.onclick = () => openWindow(p.app, p.title);
+                taskbarContainer.appendChild(btn);
+            });
 
                 desktop.appendChild(icon);
             });
@@ -1524,6 +1562,36 @@ else if (appType === 'zet_chat') {
                     }, 50);
                 }
             }
+// --- НОВАЯ ИГРА: ZET FIGHT (UNDERTALE BOSS) ---
+            else if (appType === 'zet_fight') {
+                contentHtml = `
+                    <div style="position: relative; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: 'Courier New', Courier, monospace; color: white; display: flex; flex-direction: column; align-items: center;">
+                        
+                        <div id="zf-menu-${zIndexCounter}" style="position: absolute; top:0; left:0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #000; z-index: 10;">
+                            <h1 style="font-size: 3rem; margin-bottom: 10px; letter-spacing: 5px; text-shadow: 2px 2px 0 red;">ZET FIGHT</h1>
+                            <p style="color: #888; margin-bottom: 30px;">Survive the P3tuh for 60 seconds.</p>
+                            <button class="papetah-btn" onclick="window.startZetFight(${zIndexCounter})" style="padding: 15px 40px; background: transparent; color: white; border: 2px solid white; font-weight: bold; cursor: pointer; font-size: 1.5rem; font-family: 'Courier New';">FIGHT</button>
+                        </div>
+
+                        <canvas id="zf-canvas-${zIndexCounter}" style="display: none; width: 100%; height: 100%; outline: none;"></canvas>
+                        
+                        <div id="zf-ui-${zIndexCounter}" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: none; align-items: center; gap: 15px; font-weight: bold; font-size: 1.2rem; z-index: 2;">
+                            <span>HP</span>
+                            <div style="width: 150px; height: 20px; background: red; border: 2px solid #555;">
+                                <div id="zf-hp-bar-${zIndexCounter}" style="width: 100%; height: 100%; background: yellow; transition: width 0.2s;"></div>
+                            </div>
+                            <span id="zf-hp-text-${zIndexCounter}">20 / 20</span>
+                            <span style="margin-left: 30px; color: #aaa;">TIME: <span id="zf-time-${zIndexCounter}">60</span></span>
+                        </div>
+
+                        <div id="zf-game-over-${zIndexCounter}" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); flex-direction: column; justify-content: center; align-items: center; z-index: 20;">
+                            <div id="zf-game-over-text-${zIndexCounter}" style="text-align: center; margin-bottom: 30px;"></div>
+                            <button onclick="window.startZetFight(${zIndexCounter})" style="padding: 10px 30px; background: transparent; color: white; border: 2px solid white; cursor: pointer; font-family: 'Courier New'; font-size: 1.2rem; margin-bottom: 10px;">RESTART</button>
+                            <button onclick="document.getElementById('zf-game-over-${zIndexCounter}').style.display='none'; document.getElementById('zf-menu-${zIndexCounter}').style.display='flex'; document.getElementById('zf-ui-${zIndexCounter}').style.display='none';" style="padding: 10px 30px; background: transparent; color: #888; border: 2px solid #888; cursor: pointer; font-family: 'Courier New'; font-size: 1rem;">MENU</button>
+                        </div>
+                    </div>
+                `;
+            }
             // --- НОВАЯ ПРОГРАММА: СБРОС СИСТЕМЫ ---
             else if (appType === 'reset') {
 win.style.zIndex = 9999999;
@@ -1585,7 +1653,7 @@ else if (appType === 'settings') {
                                 <h2>О системе</h2>
                                 <div class="setting-group">
                                     <div class="setting-label">Версия FeistOS</div>
-                                    <div style="font-family:monospace; color:#333;">v0.065 Alpha</div>
+                                    <div style="font-family:monospace; color:#333;">v0.07 Alpha</div>
                                 </div>
                                 <div class="setting-group">
                                     <div class="setting-label">Статус ядра</div>
@@ -1594,6 +1662,14 @@ else if (appType === 'settings') {
                                 <div class="setting-group">
                                     <div class="setting-label">Имя устройства</div>
                                     <input type="text" class="st-input" value="WORKSTATION-X" disabled style="background:#eee;">
+                                </div>
+                                <div class="setting-group">
+                                    <div class="setting-label">Модификации ядра</div>
+                                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13px;">
+                                        <input type="checkbox" onchange="window.toggleFPSBypass(this.checked)" ${localStorage.getItem('feistos_fps_bypass') === 'true' ? 'checked' : ''}>
+                                        Включить FPS Bypass (120 Hz)
+                                    </label>
+                                    <p style="font-size:11px; color:#666; margin-top:5px;">Принудительно заставляет игры работать в 120 FPS, игнорируя герцовку монитора. (Требует перезапуска открытых игр)</p>
                                 </div>
                             </div>
 
@@ -1702,7 +1778,76 @@ else if (appType === 'settings') {
                         </div>
                     </div>
                 `;
-            } else {
+}
+           // --- НОВАЯ ИГРА: PAPETAH JUMP (ПРОКАЧАННОЕ МЕНЮ) ---
+            else if (appType === 'papetah_jump') {
+                contentHtml = `
+                    <style>
+                        /* Стили чисто для этой игры */
+                        .papetah-btn { transition: 0.1s; }
+                        .papetah-btn:hover { transform: scale(1.05); }
+                        .papetah-btn:active { transform: scale(0.95); margin-top: 4px; box-shadow: 0 2px 0 #c27d00 !important; }
+                        .papetah-card { transition: 0.2s; position: relative; overflow: hidden; }
+                        .papetah-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.6) !important; border: 2px solid #fff; }
+                        .papetah-card::after { content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,0.3), rgba(255,255,255,0)); transform: skewX(-25deg); transition: 0.5s; }
+                        .papetah-card:hover::after { left: 200%; }
+                    </style>
+
+                    <div style="position: relative; width: 100%; height: 100%; background: #222; overflow: hidden; font-family: 'Segoe UI', sans-serif;">
+                        <canvas id="papetahCanvas-${zIndexCounter}" style="display: none; width: 100%; height: 100%; outline: none; background: #87CEEB;"></canvas>
+                        
+                        <div id="papetah-ui-${zIndexCounter}" style="position: absolute; top: 10px; left: 15px; font-weight: bold; color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.7); display: none; z-index: 2;">
+                            <div style="font-size: 22px;">Level: <span style="color:#FFD700;">Start Junior</span></div>
+                            <div style="font-size: 18px; margin-top:5px;">Time: <span id="papetah-timer-${zIndexCounter}">0.0</span>s</div>
+                        </div>
+
+                        <div id="papetah-main-menu-${zIndexCounter}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+                                    background: linear-gradient(135deg, #1e3c72, #2a5298); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10;">
+                            
+                            <div style="font-size: 5rem; line-height: 1; margin-bottom: 30px; text-shadow: 0 10px 20px rgba(0,0,0,0.5);">🐸</div>
+                            <h1 style="color: white; font-size: 4rem; margin: 0; font-family: 'Impact', sans-serif; letter-spacing: 3px; text-shadow: 0 6px 0 #000, 0 10px 15px rgba(0,0,0,0.5);">PAPETAH JUMP</h1>
+                            <p style="color: #aaccff; margin-bottom: 40px; font-size: 1.2rem; font-weight: bold;">Classic Platformer Edition</p>
+                            
+                            <button class="papetah-btn" onclick="document.getElementById('papetah-main-menu-${zIndexCounter}').style.display='none'; document.getElementById('papetah-level-select-${zIndexCounter}').style.display='flex';" 
+                                    style="padding: 15px 70px; background: #FF9800; color: white; border: none; border-radius: 40px; font-weight: bold; cursor: pointer; font-size: 2rem; box-shadow: 0 8px 0 #e65100, 0 15px 20px rgba(0,0,0,0.4);">
+                                PLAY
+                            </button>
+
+                            <button onclick="alert('Soon.......')" style="margin-top: 25px; padding: 10px 30px; background: rgba(0,0,0,0.3); color: white; border: 2px solid rgba(255,255,255,0.5); border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 1rem; transition: 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.6)'" onmouseout="this.style.background='rgba(0,0,0,0.3)'">Community Levels</button>
+                        </div>
+
+                        <div id="papetah-level-select-${zIndexCounter}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+                                    background: #111; display: none; flex-direction: column; padding: 20px; box-sizing: border-box; z-index: 10;">
+                            
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                <h2 style="color: white; margin: 0; font-size: 2rem;">SELECT LEVEL</h2>
+                                <button onclick="document.getElementById('papetah-level-select-${zIndexCounter}').style.display='none'; document.getElementById('papetah-main-menu-${zIndexCounter}').style.display='flex';" style="padding: 8px 20px; background: #444; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">⬅ BACK</button>
+                            </div>
+
+                            <div style="display: flex; flex-wrap: wrap; gap: 20px; overflow-y: auto; padding: 10px;">
+                                
+                                <div class="papetah-card" onclick="window.startPapetahGame(${zIndexCounter}, 'start_junior')" style="width: 220px; height: 140px; background: linear-gradient(to bottom, #4CAF50, #2E7D32); border-radius: 12px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5); display: flex; flex-direction: column; justify-content: flex-end; padding: 15px; box-sizing: border-box; border: 2px solid transparent;">
+                                    <div style="color: white; font-weight: bold; font-size: 1.4rem; text-shadow: 1px 1px 3px rgba(0,0,0,0.8);">Start Junior</div>
+                                    <div style="color: #cfc; font-size: 0.9rem; margin-top: 5px;">Difficulty: ⭐☆☆</div>
+                                </div>
+
+                                <div class="papetah-card" onclick="window.startPapetahGame(${zIndexCounter}, 'p3tuh1')" style="width: 220px; height: 140px; background: linear-gradient(to bottom, #8E24AA, #4A148C); border-radius: 12px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5); display: flex; flex-direction: column; justify-content: flex-end; padding: 15px; box-sizing: border-box; border: 2px solid transparent;">
+                                    <div style="color: white; font-weight: bold; font-size: 1.4rem; text-shadow: 1px 1px 3px rgba(0,0,0,0.8);">P3tuh1</div>
+                                    <div style="color: #ffb3ff; font-size: 0.9rem; margin-top: 5px;">Difficulty: ⭐⭐⭐ (Hard)</div>
+                                </div>
+
+                            </div>
+                        </div>
+                        
+                        <div id="papetah-game-over-${zIndexCounter}" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; background: rgba(0,0,0,0.85); padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 20; border: 2px solid #444; width: 340px;">
+                            <div id="papetah-game-over-text-${zIndexCounter}"></div>
+                            <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+                                <button class="papetah-btn" onclick="window.startPapetahGame(${zIndexCounter}, window.currentPapetahLevel)" style="padding: 10px 20px; background: #32CD32; color: white; border: none; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 1.1rem; box-shadow: 0 4px 0 #228B22;">RESTART (R)</button>
+                                <button class="papetah-btn" onclick="window.resetPapetahMenu(${zIndexCounter})" style="padding: 10px 20px; background: #FF9800; color: white; border: none; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 1.1rem; box-shadow: 0 4px 0 #e65100;">MENU</button>
+                            </div>
+                        </div>
+`;
+ } else {
                 contentHtml = `<div style="display:flex; justify-content:center; align-items:center; height:100%;">Загрузка...</div>`;
             }
 
@@ -1739,21 +1884,70 @@ else if (appType === 'settings') {
 
             desktop.appendChild(win);
 
-            // Панель задач и события
+            // --- ПАНЕЛЬ ЗАДАЧ И КОНТЕКСТНОЕ МЕНЮ (ПКМ) ---
             const taskbarContainer = document.getElementById('taskbar-apps');
-            const taskBtn = document.createElement('div');
-            taskBtn.className = 'taskbar-app active';
-            taskBtn.textContent = title;
-            taskbarContainer.appendChild(taskBtn);
+            // Ищем, есть ли уже кнопка (например, если она была закреплена)
+            let taskBtn = Array.from(taskbarContainer.children).find(btn => btn.dataset.app === appType);
+            
+            if (!taskBtn) {
+                taskBtn = document.createElement('div');
+                taskBtn.className = 'taskbar-app active';
+                taskBtn.textContent = title;
+                taskBtn.dataset.app = appType;
+                taskbarContainer.appendChild(taskBtn);
+            } else {
+                taskBtn.classList.add('active'); // Активируем закрепленную
+            }
 
-            // Логика кнопок
             const toggleWin = () => {
                 if(win.style.display === 'none') { win.style.display = 'flex'; win.style.zIndex = ++zIndexCounter; taskBtn.classList.add('active'); }
                 else { win.style.display = 'none'; taskBtn.classList.remove('active'); }
             };
             taskBtn.onclick = toggleWin;
+
+            // Логика закрытия и сворачивания
             win.querySelector('.btn-minimize').onclick = () => { win.style.display = 'none'; taskBtn.classList.remove('active'); };
-            win.querySelector('.btn-close').onclick = () => { win.remove(); taskBtn.remove(); };
+            win.querySelector('.btn-close').onclick = () => { 
+                win.remove(); 
+                const pinned = JSON.parse(localStorage.getItem('feistos_pinned') || '[]');
+                if (!pinned.some(p => p.app === appType)) {
+                    taskBtn.remove(); // Удаляем если не закреплена
+                } else {
+                    taskBtn.classList.remove('active'); // Оставляем тусклой если закреплена
+                    
+                    // --- ФИКС БАГА ---
+                    // Переназначаем клик: теперь кнопка будет не сворачивать/разворачивать удаленное окно, а открывать НОВОЕ!
+                    taskBtn.onclick = () => openWindow(appType, title);
+                }
+            };
+
+            // ПКМ по приложению в панели задач
+            taskBtn.oncontextmenu = (e) => {
+                e.preventDefault(); e.stopPropagation();
+                hideContextMenus();
+                const tbMenu = document.getElementById('taskbar-context-menu');
+                if(tbMenu) {
+                    tbMenu.style.display = 'block';
+                    tbMenu.style.left = e.pageX + 'px';
+                    tbMenu.style.bottom = (window.innerHeight - e.pageY + 10) + 'px'; // Открываем ВВЕРХ!
+                    tbMenu.style.top = 'auto'; 
+                    
+                    document.getElementById('tb-ctx-close').onclick = () => { win.querySelector('.btn-close').click(); hideContextMenus(); };
+                    document.getElementById('tb-ctx-restart').onclick = () => { win.querySelector('.btn-close').click(); setTimeout(()=>openWindow(appType, title), 100); hideContextMenus(); };
+                    
+                    const pinBtn = document.getElementById('tb-ctx-pin');
+                    let pinned = JSON.parse(localStorage.getItem('feistos_pinned') || '[]');
+                    const isPinned = pinned.some(p => p.app === appType);
+                    pinBtn.textContent = isPinned ? '❌ Открепить' : '📌 Закрепить';
+                    
+                    pinBtn.onclick = () => {
+                        if (isPinned) pinned = pinned.filter(p => p.app !== appType);
+                        else pinned.push({app: appType, title: title});
+                        localStorage.setItem('feistos_pinned', JSON.stringify(pinned));
+                        hideContextMenus();
+                    };
+                }
+            };
 
             if (appType === 'notepad') {
                 win.querySelector('#notepad-area').addEventListener('input', function() { localStorage.setItem('feistos_notepad_data', this.value); });
@@ -1857,6 +2051,7 @@ else if (appType === 'settings') {
 
         function onIconMouseDown(e, icon) {
             e.stopPropagation();
+            if (typeof blackHoleActive !== 'undefined' && blackHoleActive) return; // Блокировка для дыры
             if (e.ctrlKey) {
 if (paintActive && !isSpacePressed) return;
 e.stopPropagation();
@@ -1896,9 +2091,9 @@ e.stopPropagation();
         }
 
         function onDesktopMouseDown(e) {
-            // Если кликнули по меню пуск или кнопке пуск - ничего не делаем тут
             if (e.target.closest('#start-menu') || e.target.closest('#start-btn')) return;
-if (paintActive && !isSpacePressed) return;
+            if (typeof blackHoleActive !== 'undefined' && blackHoleActive) return; // Блокировка для дыры
+            if (paintActive && !isSpacePressed) return;
 
             if (e.target !== desktop) return;
             if (!e.ctrlKey) clearSelection();
@@ -1948,6 +2143,7 @@ if (paintActive && !isSpacePressed) return;
             paintActive = false;
             const pCanvas = document.getElementById('graffiti-layer');
             if(pCanvas) pCanvas.getContext('2d').clearRect(0, 0, pCanvas.width, pCanvas.height);
+const bypass = localStorage.getItem('feistos_fps_bypass');
             
             localStorage.setItem('feistos_infected', 'true');
             
@@ -2338,10 +2534,12 @@ textArea.style.userSelect = "none"; // Запрет выделения мышк�
         function hideContextMenus() {
             if(ctxMenu) ctxMenu.style.display = 'none';
             if(dCtxMenu) dCtxMenu.style.display = 'none';
-            
-            // Скрытие меню корзины
             const tCtxMenu = document.getElementById('trash-context-menu');
             if(tCtxMenu) tCtxMenu.style.display = 'none';
+            
+            // Скрытие нового меню панели задач
+            const tbCtxMenu = document.getElementById('taskbar-context-menu');
+            if(tbCtxMenu) tbCtxMenu.style.display = 'none';
         }
         document.addEventListener('click', hideContextMenus);
 
@@ -3790,13 +3988,10 @@ document.addEventListener('mousemove', (e) => {
 
 // БЛОКИРОВКА КОНТЕКСТНОГО МЕНЮ И УДАЛЕНИЕ ВНЕ РЕЖИМА
 document.addEventListener('contextmenu', (e) => {
-    // Если мы в режиме рисования -> всегда блокируем меню (чтобы работал ластик)
-    if (paintActive) {
-        e.preventDefault();
-        return false;
-    }
+    if (paintActive) { e.preventDefault(); return false; }
+    // --- ЗАЩИТА ПКМ ДЛЯ ЧЕРНОЙ ДЫРЫ ---
+    if (typeof blackHoleActive !== 'undefined' && blackHoleActive) { e.preventDefault(); return false; }
 
-    // Если мы НЕ в режиме рисования -> проверяем, кликнули ли по рисунку
     const pixel = pCtx.getImageData(e.clientX, e.clientY, 1, 1).data;
     if (pixel[3] > 0) { // Если пиксель не прозрачный
         e.preventDefault();
@@ -4755,6 +4950,899 @@ window.sendZetMessage = function(winId) {
     input.value = ''; // Очищаем поле ввода
 };
 
+// ==========================================
+// ИГРА: PAPETAH JUMP (ПЛАТФОРМЕР)
+// ==========================================
+window.startPapetahGame = function(id, levelId) {
+    window.currentPapetahLevel = levelId || 'start_junior'; // Запоминаем текущий уровень
+    const canvas = document.getElementById(`papetahCanvas-${id}`);
+    const menu = document.getElementById(`papetah-main-menu-${id}`);
+    const levelSelect = document.getElementById(`papetah-level-select-${id}`);
+    const ui = document.getElementById(`papetah-ui-${id}`);
+    const timerEl = document.getElementById(`papetah-timer-${id}`);
+    const gameOverEl = document.getElementById(`papetah-game-over-${id}`);
+    const gameOverText = document.getElementById(`papetah-game-over-text-${id}`);
+    if (!canvas) return;
+
+    if (levelSelect) levelSelect.style.display = 'none';
+    canvas.style.display = 'block';
+    ui.style.display = 'block';
+    gameOverEl.style.display = 'none';
+
+    canvas.width = canvas.parentElement.clientWidth;
+    canvas.height = canvas.parentElement.clientHeight;
+    const ctx = canvas.getContext('2d');
+
+    let isRunning = true;
+    let time = 0;
+    let cameraX = 0;
+    
+    // --- УПРАВЛЕНИЕ (с защитой от двойного навешивания и кнопкой R) ---
+    const keys = {};
+    if (canvas.papetahKeydown) canvas.removeEventListener('keydown', canvas.papetahKeydown);
+    if (canvas.papetahKeyup) canvas.removeEventListener('keyup', canvas.papetahKeyup);
+
+    canvas.papetahKeydown = (e) => { 
+        keys[e.code] = true; 
+        if(['Space', 'ArrowUp', 'ArrowDown'].includes(e.code)) e.preventDefault(); 
+        
+        // Быстрый рестарт по нажатию 'R'
+        if(e.code === 'KeyR') {
+            window.startPapetahGame(id, window.currentPapetahLevel);
+        }
+    };
+    canvas.papetahKeyup = (e) => keys[e.code] = false;
+    
+    canvas.addEventListener('keydown', canvas.papetahKeydown);
+    canvas.addEventListener('keyup', canvas.papetahKeyup);
+    canvas.tabIndex = 1; 
+    canvas.focus();
+
+    // Главный герой (Папета)
+    const player = {
+        x: 50, y: 200, w: 24, h: 24,
+        vx: 0, vy: 0,
+        speed: 1.2, maxSpeed: 7, friction: 0.8,
+        jumpPower: -13, gravity: 0.6,
+        grounded: false
+    };
+
+    // --- СИСТЕМА УРОВНЕЙ И ТЕМ ---
+    let level = [];
+    let theme = 'normal';
+    
+    // Обновляем название уровня в интерфейсе
+    const levelNameSpan = ui.querySelector('div:first-child span');
+
+    if (levelId === 'start_junior') {
+        theme = 'normal';
+        if(levelNameSpan) { levelNameSpan.textContent = 'Start Junior'; levelNameSpan.style.color = '#FFD700'; }
+        level = [
+            {x: 0, y: 350, w: 400, h: 50, type: 'solid'},
+            {x: 500, y: 350, w: 100, h: 50, type: 'solid'},
+            {x: 700, y: 300, w: 100, h: 50, type: 'solid'},
+            {x: 900, y: 250, w: 100, h: 50, type: 'solid'},
+            {x: 1100, y: 200, w: 100, h: 50, type: 'solid'},
+            {x: 400, y: 450, w: 1200, h: 100, type: 'lava'},
+            {x: 1300, y: 350, w: 300, h: 50, type: 'solid'},
+            {x: 1700, y: 350, w: 50, h: 50, type: 'solid'},
+            {x: 1850, y: 350, w: 50, h: 50, type: 'solid'},
+            {x: 2000, y: 350, w: 50, h: 50, type: 'solid'},
+            {x: 1600, y: 450, w: 600, h: 100, type: 'lava'},
+            {x: 2200, y: 350, w: 200, h: 50, type: 'solid'},
+            {x: 2400, y: 250, w: 50, h: 20, type: 'solid'},
+            {x: 2250, y: 150, w: 50, h: 20, type: 'solid'},
+            {x: 2400, y: 50, w: 200, h: 20, type: 'solid'},
+            {x: 2700, y: 300, w: 1000, h: 50, type: 'solid'},
+            {x: 2900, y: 280, w: 50, h: 20, type: 'lava'},
+            {x: 3150, y: 280, w: 50, h: 20, type: 'lava'},
+            {x: 3400, y: 280, w: 50, h: 20, type: 'lava'},
+            {x: 3800, y: 200, w: 60, h: 20, type: 'solid'},
+            {x: 4000, y: 100, w: 60, h: 20, type: 'solid'},
+            {x: 4200, y: 200, w: 500, h: 50, type: 'solid'},
+            {x: 4600, y: 100, w: 60, h: 100, type: 'win'},
+            {x: -500, y: 600, w: 10000, h: 200, type: 'lava'}
+        ];
+    } 
+    else if (levelId === 'p3tuh1') {
+        theme = 'dark'; 
+        if(levelNameSpan) { levelNameSpan.textContent = 'P3tuh1: The Factory'; levelNameSpan.style.color = '#ff0055'; }
+        level = [
+            // ==========================================
+            // ДЕКОРАЦИИ НА ЗАДНЕМ ФОНЕ (ГОРЫ, ТРУБЫ, ОПОРЫ)
+            // ==========================================
+            // Опоры для стартовой зоны
+            {x: 0, y: 400, w: 250, h: 100, type: 'decor'},
+            // Храм (На заднем фоне)
+            {x: 50, y: 150, w: 30, h: 200, type: 'decor'},
+            {x: 180, y: 150, w: 30, h: 200, type: 'decor'},
+            {x: 30, y: 130, w: 200, h: 20, type: 'decor'}, 
+            // Каменные столбы (опоры) под островками
+            {x: 365, y: 400, w: 50, h: 100, type: 'decor'},
+            {x: 565, y: 350, w: 50, h: 150, type: 'decor'},
+            {x: 765, y: 400, w: 50, h: 100, type: 'decor'},
+            
+            // Задний фон Фабрики (Стена внутри и трубы на крыше)
+            {x: 1000, y: 140, w: 1050, h: 210, type: 'decor'}, // Темная стена внутри фабрики
+            {x: 1100, y: 50, w: 40, h: 50, type: 'decor'}, // Трубы
+            {x: 1300, y: 20, w: 40, h: 80, type: 'decor'},
+            {x: 1500, y: 50, w: 40, h: 50, type: 'decor'},
+            {x: 1700, y: 20, w: 40, h: 80, type: 'decor'},
+            {x: 1900, y: 50, w: 40, h: 50, type: 'decor'},
+            
+            // Задний фон Башни
+            {x: 2090, y: -20, w: 310, h: 420, type: 'decor'}, // Чтобы башня не была пустой внутри
+            
+            // Опоры разбитого моста
+            {x: 2980, y: 370, w: 90, h: 150, type: 'decor'},
+            {x: 3280, y: 370, w: 90, h: 150, type: 'decor'},
+            {x: 3580, y: 370, w: 90, h: 150, type: 'decor'},
+            
+            // Огромные колонны Алтаря
+            {x: 4420, y: 200, w: 360, h: 300, type: 'decor'}, // Центральный столб алтаря
+            {x: 4450, y: 50, w: 30, h: 100, type: 'decor'}, // Статуя/колонна 1
+            {x: 4720, y: 50, w: 30, h: 100, type: 'decor'}, // Статуя/колонна 2
+
+            // ==========================================
+            // ЗОНА 1: РУИНЫ ХРАМА (Старт)
+            // ==========================================
+            {x: 0, y: 350, w: 250, h: 50, type: 'solid'},
+            {x: 350, y: 350, w: 80, h: 50, type: 'solid'},
+            {x: 550, y: 300, w: 80, h: 50, type: 'solid'}, 
+            {x: 750, y: 350, w: 80, h: 50, type: 'solid'},
+            
+            // ==========================================
+            // ЗОНА 2: ВХОД В ФАБРИКУ И ПРЕССЫ
+            // ==========================================
+            {x: 950, y: -50, w: 50, h: 300, type: 'solid'}, // Верхняя часть входа
+            {x: 950, y: 350, w: 50, h: 150, type: 'solid'},  // Нижняя часть входа
+            
+            {x: 1000, y: 350, w: 1050, h: 50, type: 'solid'}, // Пол фабрики
+            {x: 1000, y: 100, w: 1050, h: 40, type: 'solid'}, // Крыша фабрики
+            
+            // Движущиеся прессы
+            {x: 1200, y: 310, w: 50, h: 50, type: 'lava', movingY: true, minY: 140, maxY: 310, vy: -3},
+            {x: 1400, y: 140, w: 50, h: 50, type: 'lava', movingY: true, minY: 140, maxY: 310, vy: 3},
+            {x: 1600, y: 310, w: 50, h: 50, type: 'lava', movingY: true, minY: 140, maxY: 310, vy: -4},
+            {x: 1800, y: 140, w: 50, h: 50, type: 'lava', movingY: true, minY: 140, maxY: 310, vy: 2},
+            
+            // ==========================================
+            // ЗОНА 3: ВЕРТИКАЛЬНАЯ БАШНЯ
+            // ==========================================
+            {x: 2050, y: -50, w: 40, h: 300, type: 'solid'}, // Левая стена (Вход)
+            {x: 2400, y: -50, w: 40, h: 130, type: 'solid'}, // Правая стена ВЕРХ (Крыша)
+            {x: 2400, y: 200, w: 40, h: 200, type: 'solid'}, // Правая стена НИЗ (ОГРОМНОЕ ОКНО для выхода)
+            {x: 2050, y: 400, w: 390, h: 50, type: 'lava'},  // Лавовый пол внутри
+            
+            {x: 2090, y: 300, w: 80, h: 20, type: 'solid'}, // Прыжок направо
+            {x: 2280, y: 240, w: 80, h: 20, type: 'solid'}, // Прыжок налево
+            {x: 2090, y: 180, w: 80, h: 20, type: 'solid'}, // Прыжок направо
+            {x: 2280, y: 120, w: 80, h: 20, type: 'solid'}, // Прыжок налево (И выход в окно!)
+            
+            {x: 2090, y: -50, w: 350, h: 20, type: 'solid'}, // Крыша башни
+            
+            // ==========================================
+            // ЗОНА 4: ПРЫЖОК ВЕРЫ И МОСТ ГЕЙЗЕРОВ
+            // ==========================================
+            {x: 2650, y: 350, w: 150, h: 50, type: 'solid'}, // Место приземления
+            
+            {x: 2950, y: 350, w: 150, h: 20, type: 'solid'},
+            {x: 3250, y: 350, w: 150, h: 20, type: 'solid'},
+            {x: 3550, y: 350, w: 150, h: 20, type: 'solid'},
+            
+            {x: 3150, y: 480, w: 40, h: 100, type: 'lava', movingY: true, minY: 280, maxY: 480, vy: -4},
+            {x: 3450, y: 480, w: 40, h: 100, type: 'lava', movingY: true, minY: 280, maxY: 480, vy: -5},
+            
+            // ==========================================
+            // ЗОНА 5: ФИНАЛЬНЫЙ ПОДЪЕМ
+            // ==========================================
+            {x: 3800, y: 300, w: 100, h: 20, type: 'solid'},
+            {x: 4000, y: 240, w: 100, h: 20, type: 'solid'},
+            {x: 4200, y: 180, w: 100, h: 20, type: 'solid'},
+            
+            // Алтарь опущен вниз, чтобы быть в центре экрана
+            {x: 4400, y: 150, w: 400, h: 50, type: 'solid'}, 
+            
+            // Финиш опущен
+            {x: 4600, y: 50, w: 60, h: 100, type: 'win'}, 
+
+            // ==========================================
+            // ГЛОБАЛЬНЫЙ ОКЕАН ЛАВЫ
+            // ==========================================
+            // Поднят до y: 480! Теперь он отлично виден по всему уровню
+            {x: -500, y: 480, w: 15000, h: 2000, type: 'lava'} 
+        ];
+    }
+// Возврат в меню после поражения/победы
+window.resetPapetahMenu = function(id) {
+    const canvas = document.getElementById(`papetahCanvas-${id}`);
+    const menu = document.getElementById(`papetah-main-menu-${id}`);
+    const gameOverEl = document.getElementById(`papetah-game-over-${id}`);
+    
+    if (gameOverEl) gameOverEl.style.display = 'none';
+    if (canvas) canvas.style.display = 'none';
+    if (menu) menu.style.display = 'flex';
+};
+
+    function rectIntersect(r1, r2) {
+        return r2.x < r1.x + r1.w && r2.x + r2.w > r1.x &&
+               r2.y < r1.y + r1.h && r2.y + r2.h > r1.y;
+    }
+
+    function die() {
+        gameOverText.innerHTML = '<div style="color:#e74c3c; font-size:36px; font-weight:bold; font-family:\'Impact\', sans-serif;">WASTED!</div><div style="color:#aaa; margin-top:10px;">Вы упали в лаву.</div>';
+        gameOverEl.style.display = 'block';
+        endGame();
+    }
+
+    function win() {
+        gameOverText.innerHTML = `<div style="color:#2ecc71; font-size:32px; font-weight:bold; font-family:\'Impact\', sans-serif;">LEVEL CLEARED!</div><div style="color:#fff; font-weight:bold; font-size: 20px; margin-top:10px;">Время: ${time.toFixed(2)}s</div>`;
+        gameOverEl.style.display = 'block';
+        endGame();
+    }
+
+    function endGame() {
+        isRunning = false;
+        ui.style.display = 'none';
+        canvas.removeEventListener('keydown', keydown);
+        canvas.removeEventListener('keyup', keyup);
+    }
+
+    let lastTime = performance.now();
+    
+    function loop(now) {
+        if (!isRunning) return;
+        requestAnimationFrame(loop);
+        
+        let dt = (now - lastTime) / 1000;
+        if(dt > 0.1) dt = 0.1; // Защита от лагов
+        lastTime = now;
+        
+        time += dt;
+        timerEl.textContent = time.toFixed(1);
+
+        // --- АНИМАЦИЯ ПОДВИЖНЫХ БЛОКОВ ---
+        for(let b of level) {
+            if (b.movingY) {
+                b.y += b.vy;
+                if (b.y <= b.minY || b.y >= b.maxY) {
+                    b.vy *= -1; // Меняем направление движения при достижении лимита
+                }
+            }
+        }
+
+        // --- ДВИЖЕНИЕ (X) ---
+        if (keys['KeyD'] || keys['ArrowRight']) player.vx += player.speed;
+        if (keys['KeyA'] || keys['ArrowLeft']) player.vx -= player.speed;
+        player.vx *= player.friction;
+        
+        if(player.vx > player.maxSpeed) player.vx = player.maxSpeed;
+        if(player.vx < -player.maxSpeed) player.vx = -player.maxSpeed;
+
+        player.x += player.vx;
+
+        // Коллизия (X)
+        for(let b of level) {
+            if(rectIntersect(player, b)) {
+                if(b.type === 'lava') return die();
+                if(b.type === 'win') return win();
+                if(b.type === 'solid') {
+                    if(player.vx > 0) player.x = b.x - player.w;
+                    else if (player.vx < 0) player.x = b.x + b.w;
+                    player.vx = 0;
+                }
+            }
+        }
+
+        // --- ДВИЖЕНИЕ (Y) ---
+        if ((keys['Space'] || keys['KeyW'] || keys['ArrowUp']) && player.grounded) {
+            player.vy = player.jumpPower;
+            player.grounded = false;
+        }
+        player.vy += player.gravity;
+        player.y += player.vy;
+        player.grounded = false;
+
+        // Коллизия (Y)
+        for(let b of level) {
+            if(rectIntersect(player, b)) {
+                if(b.type === 'lava') return die();
+                if(b.type === 'win') return win();
+                if(b.type === 'solid') {
+                    if(player.vy > 0) {
+                        player.y = b.y - player.h;
+                        player.grounded = true;
+                        player.vy = 0;
+                    } else if (player.vy < 0) {
+                        player.y = b.y + b.h;
+                        player.vy = 0;
+                    }
+                }
+            }
+        }
+
+        // --- КАМЕРА ---
+        // Камера плавно следует за игроком, держа его левее центра
+        let targetCamX = player.x - canvas.width / 3;
+        cameraX += (targetCamX - cameraX) * 0.1;
+
+        // --- ОТРИСОВКА (GRAPHICS UPDATE v0.07) ---
+        // 1. Небо (Градиент)
+        let skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        if (theme === 'dark') {
+            skyGrad.addColorStop(0, '#1a0b2e'); // Темно-фиолетовый космос
+            skyGrad.addColorStop(1, '#4a154b'); // Бордовый горизонт
+        } else if (theme === 'sakura') {
+            skyGrad.addColorStop(0, '#ff9a9e'); // Розовый закат
+            skyGrad.addColorStop(1, '#fecfef'); // Светло-персиковый
+        } else {
+            skyGrad.addColorStop(0, '#4facfe'); // Голубой
+            skyGrad.addColorStop(1, '#00f2fe');
+        }
+        ctx.fillStyle = skyGrad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.save();
+        ctx.translate(Math.round(-cameraX), 0);
+
+        // 2. Облака (Цвет зависит от темы)
+        ctx.fillStyle = theme === 'dark' ? 'rgba(255, 100, 150, 0.15)' : 
+                       (theme === 'sakura' ? 'rgba(255, 230, 240, 0.7)' : 'rgba(255, 255, 255, 0.4)');
+        const drawCloud = (x, y, scale) => {
+            ctx.beginPath();
+            ctx.arc(x, y, 30 * scale, 0, Math.PI * 2);
+            ctx.arc(x + 25 * scale, y - 10 * scale, 35 * scale, 0, Math.PI * 2);
+            ctx.arc(x + 50 * scale, y, 28 * scale, 0, Math.PI * 2);
+            ctx.fill();
+        };
+        drawCloud(cameraX * 0.8 + 100, 150, 1.2);
+        drawCloud(cameraX * 0.8 + 400, 100, 0.8);
+        drawCloud(cameraX * 0.8 + 700, 180, 1.5);
+        drawCloud(cameraX * 0.9 + 1200, 120, 1.0);
+
+        // 3. Отрисовка блоков
+        for(let b of level) {
+            if(b.type === 'solid' || b.type === 'decor') {
+                
+                // Основной цвет
+                if (b.type === 'decor') {
+                    // ЕСЛИ У ДЕКОРАЦИИ ЕСТЬ СВОЙ ЦВЕТ - ИСПОЛЬЗУЕМ ЕГО! (Секрет уровня Cherry)
+                    ctx.fillStyle = b.color ? b.color : (theme === 'dark' ? '#3b254a' : '#5c2d0c'); 
+                } else {
+                    ctx.fillStyle = theme === 'sakura' ? '#4a3b32' : (theme === 'dark' ? '#2d3436' : '#8B4513');
+                }
+                
+                ctx.beginPath(); ctx.roundRect(b.x, b.y, b.w, b.h, 8); ctx.fill();
+                
+                // Траву рисуем ТОЛЬКО на твердых блоках
+                if (b.type === 'solid') {
+                    ctx.fillStyle = theme === 'sakura' ? '#ff99aa' : (theme === 'dark' ? '#8e44ad' : '#32CD32');
+                    ctx.beginPath(); ctx.roundRect(b.x, b.y, b.w, 15, [8, 8, 0, 0]); ctx.fill();
+                    
+                    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.roundRect(b.x+1, b.y+1, b.w-2, b.h-2, 8); ctx.stroke();
+                }
+
+            } else if (b.type === 'lava') {
+                const waveHeight = Math.sin(now / 300 + b.x / 100) * 4;
+                const lavaSurfaceY = b.y + waveHeight;
+
+                // Градиент лавы (ИЛИ МАГИЧЕСКОЙ РЕКИ)
+                let lavaGrad = ctx.createLinearGradient(0, b.y, 0, b.y + 200);
+                if (theme === 'dark') {
+                    lavaGrad.addColorStop(0, '#ff0055'); 
+                    lavaGrad.addColorStop(1, '#4a001a');
+                } else if (theme === 'sakura') {
+                    lavaGrad.addColorStop(0, '#00c6ff'); // Голубая магия воды
+                    lavaGrad.addColorStop(1, '#0072ff'); // Глубокий синий
+                } else {
+                    lavaGrad.addColorStop(0, '#FF4500'); 
+                    lavaGrad.addColorStop(1, '#8B0000');
+                }
+
+                ctx.fillStyle = lavaGrad;
+                ctx.fillRect(b.x, lavaSurfaceY, b.w, Math.max(b.h, canvas.height - lavaSurfaceY + 500));
+
+                // Светящаяся кромка
+                ctx.fillStyle = theme === 'sakura' ? 'rgba(255, 255, 255, 0.6)' : (theme === 'dark' ? 'rgba(255, 0, 100, 0.5)' : 'rgba(255, 255, 0, 0.5)');
+                ctx.fillRect(b.x, lavaSurfaceY - 2, b.w, 5);
+
+            } else if (b.type === 'win') {
+                const pulse = Math.sin(now / 200) * 5;
+                ctx.fillStyle = '#FFD700';
+                ctx.shadowColor = '#FFD700';
+                ctx.shadowBlur = 20 + pulse;
+                ctx.beginPath(); ctx.roundRect(b.x, b.y, b.w, b.h, 10); ctx.fill();
+                ctx.shadowBlur = 0;
+
+                ctx.strokeStyle = '#FFF';
+                ctx.lineWidth = 4;
+                ctx.beginPath(); ctx.roundRect(b.x+2, b.y+2, b.w-4, b.h-4, 10); ctx.stroke();
+            }
+        }
+
+        // 4. Отрисовка Игрока
+        ctx.fillStyle = '#FFD700'; 
+        ctx.beginPath();
+        ctx.roundRect(player.x, player.y, player.w, player.h, 12); 
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(255, 100, 100, 0.6)';
+        ctx.beginPath(); ctx.arc(player.x + 5, player.y + 16, 3, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(player.x + player.w - 5, player.y + 16, 3, 0, Math.PI*2); ctx.fill();
+        
+        // В хардкорном режиме злые глаза, в сакуре - обычные милые
+        let dir = player.vx > 0.5 ? 1 : (player.vx < -0.5 ? -1 : 0);
+        ctx.fillStyle = '#FFF';
+        ctx.beginPath(); ctx.arc(player.x + 7, player.y + 8, 5, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(player.x + player.w - 7, player.y + 8, 5, 0, Math.PI*2); ctx.fill();
+        
+        ctx.fillStyle = theme === 'dark' ? '#ff0000' : '#000';
+        ctx.beginPath(); ctx.arc(player.x + 7 + dir*2, player.y + 8, 2.5, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(player.x + player.w - 7 + dir*2, player.y + 8, 2.5, 0, Math.PI*2); ctx.fill();
+
+        ctx.restore();
+    }
+    
+    requestAnimationFrame(loop);
+};
+
+// ==========================================
+// РЕЖИМ: BLACK HOLE (КОСМИЧЕСКИЕ ОРБИТЫ)
+// ==========================================
+let blackHoleActive = false;
+let blackHoles = []; // Теперь это массив дыр!
+let bhAnimFrame = null;
+let bhObjects = []; // Хранит все окна и иконки
+
+function toggleBlackHole() {
+    if (localStorage.getItem('feistos_infected') === 'true') return;
+    const btn = document.getElementById('blackhole-btn');
+    blackHoleActive = !blackHoleActive;
+
+    if (blackHoleActive) {
+        if (typeof gravityActive !== 'undefined' && gravityActive) toggleGravity();
+        btn.style.background = "var(--primary-color)";
+        btn.style.color = "black";
+        document.body.style.cursor = 'crosshair';
+    } else {
+        btn.style.background = "rgba(255,255,255,0.1)";
+        btn.style.color = "white";
+        document.body.style.cursor = 'default';
+        removeBlackHoleFull(); // Возвращаем всё на место
+    }
+}
+
+// Слушатель кликов ЛКМ (создать) и ПКМ (удалить конкретную)
+document.addEventListener('mousedown', (e) => {
+    if (blackHoleActive) {
+        if (e.target.closest('.taskbar') || e.target.closest('#start-menu')) return;
+        
+        if (e.button === 0) { // ЛКМ - Создать дыру
+            spawnBlackHole(e.clientX, e.clientY);
+        } else if (e.button === 2) { // ПКМ - Убрать КОНКРЕТНУЮ дыру
+            // Ищем дыру, которая находится под курсором (радиус воронки ~60px)
+            let clickedIndex = -1;
+            for (let i = 0; i < blackHoles.length; i++) {
+                let bh = blackHoles[i];
+                // Вычисляем дистанцию от мышки до центра черной дыры (Теорема Пифагора)
+                let dist = Math.sqrt(Math.pow(e.clientX - bh.x, 2) + Math.pow(e.clientY - bh.y, 2));
+                if (dist <= 60) { 
+                    clickedIndex = i;
+                    break;
+                }
+            }
+
+            // Если попали по дыре - удаляем ТОЛЬКО её
+            if (clickedIndex !== -1) {
+                blackHoles[clickedIndex].el.remove(); // Убираем анимацию
+                blackHoles.splice(clickedIndex, 1);   // Удаляем из расчетов гравитации
+            }
+        }
+    }
+});
+
+function spawnBlackHole(x, y) {
+    // Динамически создаем визуал новой черной дыры
+    const bh = document.createElement('div');
+    bh.className = 'bh-visual';
+    bh.style.left = x + 'px';
+    bh.style.top = y + 'px';
+    document.body.appendChild(bh);
+
+    // Добавляем в массив
+    blackHoles.push({ x: x, y: y, el: bh });
+
+    // Если объекты еще не собраны, собираем их
+    if (bhObjects.length === 0) {
+        const elements = [...document.querySelectorAll('.icon'), ...document.querySelectorAll('.window')];
+        elements.forEach(el => {
+            const rect = el.getBoundingClientRect();
+            bhObjects.push({
+                el: el,
+                x: rect.left,
+                y: rect.top,
+                vx: (Math.random() - 0.5) * 5, // Легкий начальный импульс
+                vy: (Math.random() - 0.5) * 5,
+                origLeft: el.style.left,
+                origTop: el.style.top,
+origZIndex: el.style.zIndex,
+                active: true
+            });
+            el.style.position = 'fixed';
+            el.style.left = rect.left + 'px';
+            el.style.top = rect.top + 'px';
+            el.style.margin = '0';
+            el.style.zIndex = '9000';
+            el.style.transition = 'none'; // Убираем CSS анимации
+        });
+    }
+
+    if (!bhAnimFrame) blackHoleLoop();
+}
+
+function blackHoleLoop() {
+    if (!blackHoleActive || blackHoles.length === 0) {
+        bhAnimFrame = null;
+        return;
+    }
+
+    bhObjects.forEach(obj => {
+        if (!obj.active) return;
+
+        const centerX = obj.x + (obj.el.offsetWidth || 50) / 2;
+        const centerY = obj.y + (obj.el.offsetHeight || 50) / 2;
+
+        let totalFx = 0;
+        let totalFy = 0;
+
+        // Рассчитываем гравитацию от КАЖДОЙ черной дыры
+        blackHoles.forEach(bh => {
+            let dx = bh.x - centerX;
+            let dy = bh.y - centerY;
+            let dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist < 15) dist = 15; // Защита от бесконечного ускорения в центре
+
+            // Физика: Притяжение к центру
+            let gravity = 200 / dist; 
+            // Физика: Касательная сила (заставляет крутиться вокруг, как планету)
+            let orbitForce = 450 / dist; 
+
+            totalFx += (dx / dist) * gravity - (dy / dist) * orbitForce;
+            totalFy += (dy / dist) * gravity + (dx / dist) * orbitForce;
+        });
+
+        // Применяем силы
+        obj.vx += totalFx;
+        obj.vy += totalFy;
+
+        // Космическое трение (стабилизирует орбиты, не дает им разлететься со скоростью света)
+        obj.vx *= 0.94;
+        obj.vy *= 0.94;
+
+        obj.x += obj.vx;
+        obj.y += obj.vy;
+
+        // Легкий отскок от краев экрана, если орбита слишком широкая
+        if (obj.x < 0) { obj.x = 0; obj.vx *= -1; }
+        if (obj.x > window.innerWidth - 60) { obj.x = window.innerWidth - 60; obj.vx *= -1; }
+        if (obj.y < 0) { obj.y = 0; obj.vy *= -1; }
+        if (obj.y > window.innerHeight - 60) { obj.y = window.innerHeight - 60; obj.vy *= -1; }
+
+        obj.el.style.left = obj.x + 'px';
+        obj.el.style.top = obj.y + 'px';
+    });
+
+    bhAnimFrame = requestAnimationFrame(blackHoleLoop);
+}
+
+// ПКМ: Удаляем все черные дыры, объекты просто замирают в невесомости
+function clearBlackHoleHole() {
+    blackHoles.forEach(bh => bh.el.remove());
+    blackHoles = [];
+    cancelAnimationFrame(bhAnimFrame);
+    bhAnimFrame = null;
+}
+
+// Отключение мода: возвращаем всё на старые места
+function removeBlackHoleFull() {
+    clearBlackHoleHole();
+    
+    bhObjects.forEach(obj => {
+        obj.el.style.position = 'absolute';
+        obj.el.style.left = obj.origLeft;
+        obj.el.style.top = obj.origTop;
+        obj.el.style.transform = 'none';
+        obj.el.style.display = ''; 
+        obj.el.style.zIndex = obj.origZIndex || ''; // <--- ДОБАВЬ ЭТУ СТРОЧКУ (Сбрасываем высоту)
+    });
+    bhObjects = [];
+}
+
+// ==========================================
+// ИГРА: ZET FIGHT (UNDERTALE BOSS BATTLE)
+// ==========================================
+window.startZetFight = function(id) {
+    const canvas = document.getElementById(`zf-canvas-${id}`);
+    const menu = document.getElementById(`zf-menu-${id}`);
+    const ui = document.getElementById(`zf-ui-${id}`);
+    const hpBar = document.getElementById(`zf-hp-bar-${id}`);
+    const hpText = document.getElementById(`zf-hp-text-${id}`);
+    const timeText = document.getElementById(`zf-time-${id}`);
+    const gameOverScreen = document.getElementById(`zf-game-over-${id}`);
+    const gameOverText = document.getElementById(`zf-game-over-text-${id}`);
+    
+    if (!canvas) return;
+
+    menu.style.display = 'none';
+    gameOverScreen.style.display = 'none';
+    canvas.style.display = 'block';
+    ui.style.display = 'flex';
+    
+    // Подгоняем размер под окно (Фиксируем пропорции для честности)
+    canvas.width = canvas.parentElement.clientWidth;
+    canvas.height = canvas.parentElement.clientHeight;
+    const ctx = canvas.getContext('2d');
+
+    // Настройки арены (Боевая коробка)
+    const arena = {
+        w: 250, h: 200,
+        get x() { return canvas.width / 2 - this.w / 2; },
+        get y() { return canvas.height - this.h - 80; }
+    };
+
+    // Игрок (Красное сердечко)
+    const player = {
+        x: arena.x + arena.w / 2, y: arena.y + arena.h / 2,
+        size: 8, // Реальный размер хитбокса (он меньше визуального для удобства уворотов)
+        visualSize: 14,
+        speed: 3.5,
+        maxHp: 20, hp: 20,
+        invuln: 0 // Кадры неуязвимости после попадания
+    };
+
+    let isRunning = true;
+    let timeElapsed = 0;
+    let frames = 0;
+    let bullets = [];
+    let lasers = [];
+
+    // Управление
+    const keys = {};
+    if (canvas.zfKeydown) canvas.removeEventListener('keydown', canvas.zfKeydown);
+    if (canvas.zfKeyup) canvas.removeEventListener('keyup', canvas.zfKeyup);
+
+    canvas.zfKeydown = (e) => { keys[e.code] = true; if(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault(); };
+    canvas.zfKeyup = (e) => keys[e.code] = false;
+    canvas.addEventListener('keydown', canvas.zfKeydown);
+    canvas.addEventListener('keyup', canvas.zfKeyup);
+    canvas.tabIndex = 1; 
+    canvas.focus();
+
+    // Обновление UI
+    function updateUI() {
+        hpBar.style.width = `${(player.hp / player.maxHp) * 100}%`;
+        hpText.textContent = `${player.hp} / ${player.maxHp}`;
+        let timeLeft = Math.max(0, 60 - Math.floor(timeElapsed));
+        timeText.textContent = timeLeft;
+    }
+
+    function takeDamage(amount) {
+        if (player.invuln > 0) return;
+        player.hp -= amount;
+        player.invuln = 60; // 1 секунда неуязвимости (при 60 fps)
+        updateUI();
+        if (player.hp <= 0) die();
+    }
+
+    function die() {
+        isRunning = false;
+        gameOverText.innerHTML = `<h1 style="color:red; font-size:3rem; margin:0;">GAME OVER</h1><p style="color:#aaa; font-size:1.2rem;">Ты продержался ${timeElapsed.toFixed(1)} секунд.</p>`;
+        gameOverScreen.style.display = 'flex';
+        canvas.style.display = 'none';
+    }
+
+    function win() {
+        isRunning = false;
+        gameOverText.innerHTML = `<h1 style="color:yellow; font-size:3rem; margin:0;">YOU SURVIVED!</h1><p style="color:#fff; font-size:1.2rem;">P3tuh побежден. Твоя решительность спасла тебя.</p>`;
+        gameOverScreen.style.display = 'flex';
+        canvas.style.display = 'none';
+    }
+
+    // --- ПАТТЕРНЫ АТАК БОССА ---
+    function spawnBullet(x, y, vx, vy, radius, color = 'white', type = 'normal') {
+        bullets.push({ x, y, vx, vy, r: radius, color, type });
+    }
+
+    function bossLogic() {
+        // Фаза 1: 0-10 сек (Падающие перья)
+        if (timeElapsed < 10) {
+            if (frames % 15 === 0) {
+                spawnBullet(arena.x + Math.random() * arena.w, arena.y - 10, 0, 3 + Math.random()*2, 4, '#fff');
+            }
+        }
+        // Фаза 2: 10-25 сек (Прицельные яйца)
+        else if (timeElapsed < 25) {
+            if (frames % 30 === 0) {
+                let dx = player.x - (canvas.width / 2);
+                let dy = player.y - (arena.y - 50);
+                let angle = Math.atan2(dy, dx);
+                spawnBullet(canvas.width / 2, arena.y - 50, Math.cos(angle)*4, Math.sin(angle)*4, 6, '#ffeb3b');
+            }
+            if (frames % 20 === 0) { // Дождь продолжается
+                spawnBullet(arena.x + Math.random() * arena.w, arena.y - 10, 0, 4, 3, '#fff');
+            }
+        }
+        // Фаза 3: 25-40 сек (Спираль из центра)
+        else if (timeElapsed < 40) {
+            if (frames % 5 === 0) {
+                let angle = frames * 0.1;
+                spawnBullet(arena.x + arena.w/2, arena.y + arena.h/2, Math.cos(angle)*3, Math.sin(angle)*3, 5, '#03a9f4');
+            }
+            // Стенки по краям
+            if (frames % 60 === 0) {
+                for(let i=0; i<5; i++) spawnBullet(arena.x - 10, arena.y + i*40 + 20, 3, 0, 4, '#ff5722');
+            }
+        }
+        // Фаза 4: 40-60 сек (АД: Прицельные + Лазеры + Рандом)
+        else if (timeElapsed < 60) {
+            if (frames % 10 === 0) {
+                spawnBullet(arena.x + Math.random() * arena.w, arena.y - 10, (Math.random()-0.5)*2, 4, 4, '#fff');
+            }
+            if (frames % 45 === 0) {
+                let dx = player.x - (canvas.width / 2);
+                let dy = player.y - (arena.y - 50);
+                let angle = Math.atan2(dy, dx);
+                // Дробовик
+                for(let i=-1; i<=1; i++) {
+                    spawnBullet(canvas.width / 2, arena.y - 50, Math.cos(angle + i*0.2)*5, Math.sin(angle + i*0.2)*5, 6, '#ffeb3b');
+                }
+            }
+        }
+        // Победа!
+        else {
+            win();
+        }
+    }
+
+    let lastTime = performance.now();
+    
+    function loop(now) {
+        if (!isRunning) return;
+        requestAnimationFrame(loop);
+        
+        let dt = (now - lastTime) / 1000;
+        if(dt > 0.1) dt = 0.1; 
+        lastTime = now;
+        
+        timeElapsed += dt;
+        frames++;
+        if (player.invuln > 0) player.invuln--;
+
+        // --- ДВИЖЕНИЕ ИГРОКА ---
+        // Если зажат Shift - замедляемся для точных уворотов
+        let currentSpeed = keys['ShiftLeft'] || keys['ShiftRight'] ? player.speed / 2 : player.speed;
+        
+        if (keys['KeyW'] || keys['ArrowUp']) player.y -= currentSpeed;
+        if (keys['KeyS'] || keys['ArrowDown']) player.y += currentSpeed;
+        if (keys['KeyA'] || keys['ArrowLeft']) player.x -= currentSpeed;
+        if (keys['KeyD'] || keys['ArrowRight']) player.x += currentSpeed;
+
+        // Ограничение ареной
+        if (player.x < arena.x + player.size) player.x = arena.x + player.size;
+        if (player.x > arena.x + arena.w - player.size) player.x = arena.x + arena.w - player.size;
+        if (player.y < arena.y + player.size) player.y = arena.y + player.size;
+        if (player.y > arena.y + arena.h - player.size) player.y = arena.y + arena.h - player.size;
+
+        // --- ЛОГИКА БОССА ---
+        bossLogic();
+
+        // --- ФИЗИКА ПУЛЬ И КОЛЛИЗИИ ---
+        for (let i = bullets.length - 1; i >= 0; i--) {
+            let b = bullets[i];
+            b.x += b.vx;
+            b.y += b.vy;
+
+            // Удаляем пули, вылетевшие далеко за арену
+            if (b.x < arena.x - 50 || b.x > arena.x + arena.w + 50 || b.y < arena.y - 50 || b.y > arena.y + arena.h + 50) {
+                bullets.splice(i, 1);
+                continue;
+            }
+
+            // Проверка столкновения с игроком (Circle-Circle)
+            let dx = b.x - player.x;
+            let dy = b.y - player.y;
+            let dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist < b.r + player.size) {
+                takeDamage(2); // Отнимаем 2 ХП
+                bullets.splice(i, 1); // Пуля исчезает при попадании
+            }
+        }
+
+        updateUI();
+
+        // --- ОТРИСОВКА ---
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Отрисовка БОССА (Сверху)
+        ctx.fillStyle = '#fff';
+        ctx.font = '24px "Courier New"';
+        ctx.textAlign = 'center';
+        // Глаза краснеют ближе к концу
+        let eyeColor = timeElapsed > 40 ? 'red' : 'white';
+        ctx.fillText(`[ P 3 T U H ]`, canvas.width / 2, arena.y - 60);
+        ctx.fillStyle = eyeColor;
+        ctx.fillText(`( Ò_Ó )`, canvas.width / 2, arena.y - 30);
+
+        // Арена
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(arena.x, arena.y, arena.w, arena.h);
+
+        // Пули
+        bullets.forEach(b => {
+            ctx.fillStyle = b.color;
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        // Игрок (Рисуем сердечко или просто красный квадрат, если мигает - значит неуязвим)
+        if (player.invuln === 0 || Math.floor(now / 100) % 2 === 0) {
+            ctx.fillStyle = '#f00';
+            // Простая отрисовка "Сердечка"
+            ctx.font = '18px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('❤️', player.x, player.y + 2);
+            
+            // Если зажат Shift, показываем точный хитбокс в центре!
+            if (keys['ShiftLeft'] || keys['ShiftRight']) {
+                ctx.fillStyle = '#0f0';
+                ctx.fillRect(player.x - 2, player.y - 2, 4, 4);
+            }
+        }
+    }
+    
+    updateUI();
+    requestAnimationFrame(loop);
+};
+
+// ==========================================
+// СИСТЕМНЫЙ FPS BYPASS (ХАК ДЛЯ 120HZ)
+// ==========================================
+let originalRAF = window.requestAnimationFrame;
+let originalCAF = window.cancelAnimationFrame;
+
+function applyFPSBypass() {
+    const bypass = localStorage.getItem('feistos_fps_bypass') === 'true';
+    if (bypass) {
+        // Жестко переопределяем встроенную функцию браузера!
+        window.requestAnimationFrame = function(callback) {
+            return setTimeout(function() {
+                callback(performance.now());
+            }, 1000 / 120); // Форсируем 120 кадров в секунду (8.33 мс)
+        };
+        window.cancelAnimationFrame = function(id) {
+            clearTimeout(id);
+        };
+    } else {
+        // Возвращаем как было (ограничение герцовкой монитора)
+        window.requestAnimationFrame = originalRAF;
+        window.cancelAnimationFrame = originalCAF;
+    }
+}
+
+// Функция для кнопки в настройках
+window.toggleFPSBypass = function(enabled) {
+    localStorage.setItem('feistos_fps_bypass', enabled ? 'true' : 'false');
+    applyFPSBypass();
+};
+
+// Активируем при старте системы
+applyFPSBypass();
 </script>
 </body>
 </html>
